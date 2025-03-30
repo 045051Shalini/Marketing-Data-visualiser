@@ -3,5 +3,4 @@ pandas
 numpy
 plotly
 llama-index
-groq
 Python
