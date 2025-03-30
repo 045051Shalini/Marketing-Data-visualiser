@@ -3,3 +3,5 @@ pandas
 numpy
 plotly
 Python
+groq
+llama-index
