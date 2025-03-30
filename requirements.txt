@@ -1,8 +1,7 @@
 streamlit
 pandas
-ReAct
 numpy
 plotly
 llama-index
-groq==0.13.1
-Python = 3.12
+groq
+Python
