@@ -4,3 +4,6 @@ numpy
 plotly
 llama-index
 groq
+llama-index
+flask
+requests
