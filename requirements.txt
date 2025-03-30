@@ -3,3 +3,5 @@ pandas
 numpy
 plotly
 llama-index
+Groq Python SDK
+Python 3.7+
