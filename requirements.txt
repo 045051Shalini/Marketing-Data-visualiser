@@ -2,6 +2,12 @@ streamlit
 pandas
 numpy
 plotly
-Python
+python
 groq
 llama-index
+llama-index-core
+llama-index-readers
+llama-index-tools
+llama-index-agent
+llama-index-llms-openai
+llama-index-llms-groq
