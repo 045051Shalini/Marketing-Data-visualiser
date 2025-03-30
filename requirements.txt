@@ -1,6 +1,6 @@
 streamlit
 pandas
-ReActAgent
+ReAct
 numpy
 plotly
 llama-index
