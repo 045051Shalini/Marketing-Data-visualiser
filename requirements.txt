@@ -4,6 +4,6 @@ ReAct
 numpy
 plotly
 llama-index
-Groq
+groq==0.13.1
 Python
 python-dotenv
