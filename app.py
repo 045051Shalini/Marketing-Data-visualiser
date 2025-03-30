@@ -5,7 +5,7 @@ import requests
 import json
 
 # Load CSV data
-df = pd.read_csv('/home/ashok/Downloads/ecommerce_dataset_updated.csv')
+df = pd.read_csv('https://raw.githubusercontent.com/your-username/your-repo/main/ecommerce_dataset_updated.csv')
 
 # Convert date column to datetime format
 df['Purchase_Date'] = pd.to_datetime(df['Purchase_Date'], dayfirst=True, errors='coerce')
@@ -31,7 +31,8 @@ elif chart_type == "Line Chart":
     query = "Generate a line chart for 'Final_Price(Rs.)' over 'Purchase_Date'. Ensure proper styling."
 
 # Call the API
-response = requests.post('http://localhost:5000/generate_chart', json={'query': query})
+api_url = "https://your-api-gateway-url/your-endpoint"
+response = requests.post(api_url, json={'query': query})
 
 if response.status_code == 200:
     response_data = response.json()
