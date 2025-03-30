@@ -151,5 +151,3 @@ if uploaded_file is not None:
             st.write("No valid Python code found in response.")
     else:
         st.write("Please enter your API key.")
-else:
-    st.write("Please upload a CSV file.")
