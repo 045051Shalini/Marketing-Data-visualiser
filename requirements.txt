@@ -2,5 +2,4 @@ streamlit
 pandas
 numpy
 plotly
-llama-index
 Python
