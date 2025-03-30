@@ -11,7 +11,7 @@ from llama_index.core import PromptTemplate
 llm = Groq(model="llama3-70b-8192", api_key="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")
 
 # URL of the CSV file on GitHub
-csv_url = "https://github.com/045051Shalini/Marketing-Data-visualiser/blob/main/ecommerce_dataset_updated.csv"
+csv_url = "https://raw.githubusercontent.com/045051Shalini/Marketing-Data-visualiser/main/ecommerce_dataset_updated.csv"
 
 # Load CSV data from GitHub
 df = pd.read_csv(csv_url)
