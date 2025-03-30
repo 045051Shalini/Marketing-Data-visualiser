@@ -5,7 +5,7 @@ import requests
 import json
 
 # Load CSV data
-df = pd.read_csv('https://raw.githubusercontent.com/your-username/your-repo/main/ecommerce_dataset_updated.csv')
+df = pd.read_csv('https://github.com/045051Shalini/Marketing-Data-visualiser/blob/main/ecommerce_dataset_updated.csv')
 
 # Convert date column to datetime format
 df['Purchase_Date'] = pd.to_datetime(df['Purchase_Date'], dayfirst=True, errors='coerce')
