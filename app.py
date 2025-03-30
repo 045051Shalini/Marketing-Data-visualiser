@@ -2,6 +2,7 @@ import streamlit as st
 import pandas as pd
 import plotly.express as px
 from groq import Groq
+import os
 import json
 import re
 from llama_index.core.readers.json import JSONReader
