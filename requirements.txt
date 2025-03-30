@@ -6,4 +6,3 @@ plotly
 llama-index
 groq==0.13.1
 Python = 3.12
-open source llm model = llama-3.3-70b-versatile
