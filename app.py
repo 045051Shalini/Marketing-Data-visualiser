@@ -3,7 +3,7 @@ import pandas as pd
 #import plotly.express as px
 import json
 import re
-#from llama_index.core.readers.json import JSONReader
+from llama_index.readers import JSONReader
 from llama_index.core import VectorStoreIndex, Document
 from llama_index.core.agent import ReActAgent
 from llama_index.core.tools import QueryEngineTool, ToolMetadata
