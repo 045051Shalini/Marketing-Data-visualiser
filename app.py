@@ -18,36 +18,19 @@ uploaded_file = st.file_uploader("Upload your CSV file", type=["csv"])
 if uploaded_file is not None:
     df = pd.read_csv(uploaded_file)
 
-    # Convert date column to datetime format
-    df['Purchase_Date'] = pd.to_datetime(df['Purchase_Date'], dayfirst=True, errors='coerce')
+    # Display the dataframe
+    st.write("Data Preview:")
+    st.write(df.head())
 
-    # Convert numerical columns to appropriate types
-    df['Price (Rs.)'] = df['Price (Rs.)'].astype(float)
-    df['Discount (%)'] = df['Discount (%)'].astype(float)
-    df['Final_Price(Rs.)'] = df['Final_Price(Rs.)'].astype(float)
+    # Extract headers
+    headers = df.columns.tolist()
 
-    # Handling missing values
-    df = df.fillna(0)
+    # Step 2: Select fields for visualization
+    st.sidebar.title("Visualization Configuration")
+    x_axis = st.sidebar.selectbox("Select X-axis", headers)
+    y_axis = st.sidebar.selectbox("Select Y-axis", headers)
 
-    # Function to extract metadata
-    def return_vals(df, c):
-        if isinstance(df[c].iloc[0], (int, float, complex)):
-            return [max(df[c]), min(df[c]), df[c].mean()]
-        elif isinstance(df[c].iloc[0], pd.Timestamp):
-            return [str(max(df[c])), str(min(df[c])), str(df[c].mean())]
-        else:
-            return list(df[c].value_counts()[:10])
-
-    # Store dataset metadata
-    dict_ = {}
-    for c in df.columns:
-        dict_[c] = {'column_name': c, 'type': str(type(df[c].iloc[0])), 'variable_information': return_vals(df, c)}
-
-    # Save metadata as JSON
-    with open("dataframe.json", "w") as fp:
-        json.dump(dict_, fp)
-
-    # Step 2: Select LLM and provide API key
+    # Step 3: Select LLM and provide API key
     st.sidebar.title("LLM Configuration")
     llm_option = st.sidebar.selectbox("Select LLM", ["Groq", "OpenAI"])
     api_key = st.sidebar.text_input("Enter API Key", type="password")
@@ -67,6 +50,24 @@ if uploaded_file is not None:
                 is_chat_model=True,
                 is_function_calling_model=True,
             )
+
+        # Function to extract metadata
+        def return_vals(df, c):
+            if isinstance(df[c].iloc[0], (int, float, complex)):
+                return [max(df[c]), min(df[c]), df[c].mean()]
+            elif isinstance(df[c].iloc[0], pd.Timestamp):
+                return [str(max(df[c])), str(min(df[c])), str(df[c].mean())]
+            else:
+                return list(df[c].value_counts()[:10])
+
+        # Store dataset metadata
+        dict_ = {}
+        for c in df.columns:
+            dict_[c] = {'column_name': c, 'type': str(type(df[c].iloc[0])), 'variable_information': return_vals(df, c)}
+
+        # Save metadata as JSON
+        with open("dataframe.json", "w") as fp:
+            json.dump(dict_, fp)
 
         # Load metadata
         reader = JSONReader()
@@ -130,13 +131,8 @@ if uploaded_file is not None:
         new_prompt = PromptTemplate(new_prompt_txt)
         agent.update_prompts({'agent_worker:system_prompt': new_prompt})
 
-        # Step 3: Generate visualizations and insights
-        chart_type = st.selectbox("Select Chart Type", ["Bar Chart", "Line Chart"])
-
-        if chart_type == "Bar Chart":
-            query = "Generate a bar chart for 'Final_Price(Rs.)' over 'Purchase_Date'. Ensure proper styling."
-        elif chart_type == "Line Chart":
-            query = "Generate a line chart for 'Final_Price(Rs.)' over 'Purchase_Date'. Ensure proper styling."
+        # Step 4: Generate visualizations and insights
+        query = f"Generate a visualization for '{y_axis}' over '{x_axis}'. Ensure proper styling."
 
         # Get response from agent
         response = agent.chat(query)
@@ -151,3 +147,5 @@ if uploaded_file is not None:
             st.write("No valid Python code found in response.")
     else:
         st.write("Please enter your API key.")
+else:
+    st.write("Please upload a CSV file.")
