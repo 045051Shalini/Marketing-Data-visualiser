@@ -3,14 +3,12 @@ import pandas as pd
 import plotly.express as px
 import json
 import re
-import os
-from dotenv import load_dotenv
-from llama_index import JSONReader, VectorStoreIndex, Document, ReActAgent, QueryEngineTool, ToolMetadata, PromptTemplate
+from llama_index.core.readers.json import JSONReader
+from llama_index.core import VectorStoreIndex, Document
+from llama_index.core.agent import ReActAgent
+from llama_index.core.tools import QueryEngineTool, ToolMetadata
 from llama_index.llms.groq import Groq
-
-# Load environment variables
-load_dotenv()
-groq_api_key = os.getenv("groq_api_key")
+from llama_index.core import PromptTemplate
 
 # Streamlit app
 st.title("Marketing Data Visualization")
@@ -34,14 +32,24 @@ if uploaded_file is not None:
 
     # Step 3: Select LLM and provide API key
     st.sidebar.title("LLM Configuration")
-    model = st.sidebar.selectbox(
-        'Choose a model', ['Llama3-8b-8192', 'Llama3-70b-8192', 'Mixtral-8x7b-32768', 'Gemma-7b-It']
-    )
-    api_key = st.sidebar.text_input("Enter API Key", type="password", value=groq_api_key)
+    llm_option = st.sidebar.selectbox("Select LLM", ["Groq", "OpenAI"])
+    api_key = st.sidebar.text_input("Enter API Key", type="password")
 
     if api_key:
-        # Initialize Groq client
-        client = Groq(api_key=api_key)
+        # Initialize LLM based on selection
+        if llm_option == "Groq":
+            llm = Groq(model="llama3-70b-8192", api_key=api_key)
+        else:
+            from llama_index.llms.openai_like import OpenAILike
+            llm = OpenAILike(
+                temperature=0.7,
+                model="gpt-3.5-turbo",
+                api_base="http://127.0.0.1:8080/v1",
+                api_key=api_key,
+                timeout=1000.0,
+                is_chat_model=True,
+                is_function_calling_model=True,
+            )
 
         # Function to extract metadata
         def return_vals(df, c):
@@ -112,7 +120,7 @@ if uploaded_file is not None:
         ]
 
         # Create agent
-        agent = ReActAgent.from_tools(query_engine_tools, llm=client, verbose=True)
+        agent = ReActAgent.from_tools(query_engine_tools, llm=llm, verbose=True)
 
         # Adjust agent prompt
         new_prompt_txt = """
