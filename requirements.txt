@@ -11,3 +11,4 @@ llama-index-tools
 llama-index-agent
 llama-index-llms-openai
 llama-index-llms-groq
+llama-index-readers-json
