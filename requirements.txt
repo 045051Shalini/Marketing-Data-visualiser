@@ -6,3 +6,4 @@ plotly
 llama-index
 Groq
 Python
+python-dotenv
