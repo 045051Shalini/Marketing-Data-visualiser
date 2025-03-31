@@ -3,3 +3,4 @@ pandas
 numpy
 llama-index-core
 llama-index-llms-groq
+llama-index-vector-stores
