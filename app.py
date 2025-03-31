@@ -9,7 +9,7 @@ from llama_index.llms.groq import Groq
 from llama_index.llms.openai import OpenAI
 import plotly.express as px
 from llama_index.core.tools import QueryEngineTool
-from llama_index.core.query_engine import PandasQueryEngine
+from llama_index.experimental.query_engine import PandasQueryEngine  # Updated import
 
 def detect_column_types(df):
     """Dynamically detect column types."""
