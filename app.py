@@ -1,13 +1,12 @@
 import streamlit as st
-import pandas as pd
-#import plotly.express as px
+from llama_index.core import SimpleDirectoryReader, VectorStoreIndex
+from llama_index.llms.groq import Groq
 import json
 import re
 from llama_index.readers.json import JSONReader
 from llama_index.core import VectorStoreIndex, Document
 from llama_index.core.agent import ReActAgent
 from llama_index.core.tools import QueryEngineTool, ToolMetadata
-#from llama_index.llms.groq import Groq
 from llama_index.core import PromptTemplate
 
 # Streamlit app
