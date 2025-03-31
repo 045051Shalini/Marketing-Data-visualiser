@@ -8,6 +8,7 @@ from llama_index.core.agent import ReActAgent
 from llama_index.llms.groq import Groq
 from llama_index.llms.openai import OpenAI
 import plotly.express as px
+
 def detect_column_types(df):
     """Dynamically detect column types."""
     column_types = {}
@@ -74,11 +75,13 @@ def main():
                 {user_prompt}
             """
             
-            agent = ReActAgent.from_tools([], llm=llm, verbose=True)
-            response = agent.chat(ai_prompt)
-            
-            # Extract insights
-            insights_text = response.response if response.response else "No insights provided by AI."
+            try:
+                agent = ReActAgent(llm=llm, verbose=True)  # Ensure agent is correctly initialized
+                response = agent.chat(ai_prompt)
+                insights_text = str(response)  # Ensure it's properly extracted
+            except Exception as e:
+                st.error(f"AI Model Error: {e}")
+                insights_text = "Could not generate insights."
             
             st.subheader("💡 AI-Generated Insights")
             st.write(insights_text)
