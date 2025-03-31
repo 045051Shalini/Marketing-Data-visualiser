@@ -4,6 +4,7 @@ from llama_index.llms.groq import Groq
 import pandas as pd
 import re
 import numpy as np
+import json
 def detect_column_types(df):
     """Dynamically detect column types."""
     column_types = {}
