@@ -5,7 +5,6 @@ import json
 import plotly.express as px
 import datetime
 import re
-import traceback
 from llama_index.core.readers.json import JSONReader
 from llama_index.core import VectorStoreIndex, Document
 from llama_index.core.agent import ReActAgent
