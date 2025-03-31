@@ -1,6 +1,5 @@
 import streamlit as st
 import pandas as pd
-import plotly.express as px
 import re
 from llama_index.llms.groq import Groq
 from llama_index.core import PromptTemplate
