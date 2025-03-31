@@ -7,6 +7,7 @@ import numpy as np
 import json
 from llama_index.core import PromptTemplate
 from llama_index.core.agent import ReActAgent
+import plotly.express as px
 
 def detect_column_types(df):
     """Dynamically detect column types."""
@@ -66,7 +67,9 @@ def main():
             # Ask user for visualization preference
             x_axis = st.selectbox("Select X-axis:", df.columns)
             y_axis = st.selectbox("Select Y-axis:", df.columns)
-            chart_type = st.selectbox("Select Chart Type:", ["bar", "line", "scatter"])
+            
+            # Add more options for plot types
+            chart_type = st.selectbox("Select Chart Type:", ["bar", "line", "scatter", "histogram", "pie", "box"])
             
             # Ensure x and y columns are valid
             if x_axis == y_axis:
@@ -100,6 +103,9 @@ def main():
                 - Analyze customer acquisition trends.
                 - Identify top-performing customer segments.
                 - Suggest optimizations for marketing campaigns.
+                - Products and categories trends.
+                - Consumer preference.
+                - Sales trends.
             """)
             
             # Create AI Agent
@@ -122,6 +128,7 @@ def main():
             if is_complex_chart(df, x_axis, y_axis):
                 st.warning("The chart may be too complex. Here are some suggestions:\n- Try focusing on fewer categories or grouping data.\n- Consider plotting a summary or aggregate statistic.")
             
+            # Display chart before insights
             if code_match:
                 extracted_code = code_match.group(1)
                 extracted_code = extracted_code.replace("pd.read_csv('your_data.csv')", "df")
@@ -136,7 +143,7 @@ def main():
             else:
                 st.error("❌ No valid Python code found in AI response.")
             
-            # Display insights if available
+            # Display insights if available (below the chart)
             if insights_match:
                 insights_text = insights_match.group(1).strip()
                 st.subheader("Marketing Insights")
