@@ -1,17 +1,18 @@
-#import streamlit as st
-#import pandas as pd
-#import numpy as np
-#import json
-#import plotly.express as px
-#import datetime
-#import re
-#import traceback
-#from llama_index.core.readers.json import JSONReader
-#from llama_index.core import VectorStoreIndex, Document
-#from llama_index.core.agent import ReActAgent
-#from llama_index.core.tools import QueryEngineTool, ToolMetadata
-#from llama_index.llms.groq import Groq
-#from llama_index.core import PromptTemplate
+import streamlit as st
+import pandas as pd
+import numpy as np
+import json
+import datetime
+import re
+import traceback
+from llama_index.core import SimpleDirectoryReader, VectorStoreIndex
+from llama_index.llms.groq import Groq
+from llama_index.core.readers.json import JSONReader
+from llama_index.core import VectorStoreIndex, Document
+from llama_index.core.agent import ReActAgent
+from llama_index.core.tools import QueryEngineTool, ToolMetadata
+from llama_index.llms.groq import Groq
+from llama_index.core import PromptTemplate
 
 def detect_column_types(df):
     """Dynamically detect column types."""
