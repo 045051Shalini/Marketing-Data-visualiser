@@ -1,9 +1,11 @@
 import streamlit as st
 import pandas as pd
-import re
-import numpy as np
-import json
 import plotly.express as px
+import re
+import json
+import numpy as np
+from llama_index.core import PromptTemplate
+from llama_index.core.agent import ReActAgent
 from llama_index.llms.groq import Groq
 from llama_index.llms.openai import OpenAI
 
@@ -28,26 +30,11 @@ def preprocess_data(df):
     column_types = detect_column_types(df)
     return df, column_types
 
-def get_ai_insights(llm, df, x_axis, y_axis, user_prompt):
-    """Generate insights using AI."""
-    dataset_info = df.describe().to_json()
-    ai_prompt = f"""
-    You are an AI specialized in marketing analytics. Analyze the dataset and generate insights.
-    Dataset Overview: {dataset_info}
-    Focus on:
-    - Key trends between {x_axis} and {y_axis}
-    - Anomalies, seasonal effects, and customer behaviors
-    - Recommendations for improving marketing strategies
-    Additional Instructions: {user_prompt}
-    Provide a structured response with key insights.
-    """
-    response = llm.complete(ai_prompt)
-    return response.text if response else "No insights available."
-
 def main():
     st.set_page_config(layout="wide")
     st.title("📊 Marketing Data Visualizer with AI Insights")
     
+    # Sidebar for input selections
     st.sidebar.header("1️⃣ Upload & Configure")
     uploaded_file = st.sidebar.file_uploader("Upload your dataset (CSV file)", type=["csv"])
     
@@ -62,7 +49,7 @@ def main():
         x_axis = st.sidebar.selectbox("Select X-axis", df.columns)
         y_axis = st.sidebar.selectbox("Select Y-axis", df.columns)
         chart_type = st.sidebar.selectbox("Select Chart Type", ["bar", "line", "scatter", "histogram", "pie", "box"])
-        user_prompt = st.sidebar.text_area("💬 Custom AI Prompt (Optional)", "Provide marketing insights from this data.")
+        user_prompt = st.sidebar.text_area("💬 Custom AI Prompt (Optional)", "Analyze the provided data and chart to generate insights.")
         generate_button = st.sidebar.button("🚀 Generate Visualization & Insights")
         
         if generate_button:
@@ -78,19 +65,34 @@ def main():
             # Initialize LLM
             llm = Groq(model="llama3-70b-8192", api_key=api_key) if "Groq" in llm_choice else OpenAI(model="gpt-4", api_key=api_key)
             
-            # Get AI insights
-            insights = get_ai_insights(llm, df, x_axis, y_axis, user_prompt)
+            # Prompt AI for insights
+            ai_prompt = f"""
+                You are an AI specialized in marketing analytics. Given the dataset and the generated visualization:
+                - Identify key trends in '{x_axis}' and '{y_axis}'.
+                - Provide actionable marketing insights based on the chart.
+                - Analyze anomalies, patterns, seasonal variations, and customer behavior.
+                - Ensure insights are specific to the provided dataset and visualization.
+                {user_prompt}
+            """
+            
+            agent = ReActAgent.from_tools([], llm=llm, verbose=True)
+            response = agent.chat(ai_prompt)
+            
+            # Extract insights
+            insights_text = response.response if response.response else "No insights provided by AI."
             
             st.subheader("💡 AI-Generated Insights")
-            st.write(insights)
+            st.write(insights_text)
             
+            # Show Python Code Button
             if st.button("📜 Show Python Code"):
-                st.code(f"""
+                python_code = f"""
                 import plotly.express as px
                 fig = px.{chart_type}(df, x='{x_axis}', y='{y_axis}', title='{chart_type.capitalize()} Visualization')
                 fig.update_layout(xaxis_title='{x_axis}', yaxis_title='{y_axis}')
                 fig.show()
-                """, language='python')
+                """
+                st.code(python_code, language='python')
     else:
         st.info("Upload a dataset and enter an API key to proceed.")
 
