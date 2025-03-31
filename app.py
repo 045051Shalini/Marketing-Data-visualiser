@@ -2,6 +2,7 @@ import streamlit as st
 from llama_index.core import SimpleDirectoryReader, VectorStoreIndex
 from llama_index.llms.groq import Groq
 import pandas as pd
+import re
 def detect_column_types(df):
     """Dynamically detect column types."""
     column_types = {}
