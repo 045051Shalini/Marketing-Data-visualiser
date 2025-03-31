@@ -2,15 +2,9 @@ streamlit
 pandas
 numpy
 plotly
-python
-groq
-llama-index
+json5  # JSON handling (standard json module is built-in, but json5 is useful for extended features)
+datetime  # Built-in, no need to include
+re  # Built-in, no need to include
+traceback  # Built-in, no need to include
 llama-index-core
-llama-index-tools
-llama-index-agent
-llama-index-llms-openai
 llama-index-llms-groq
-llama-index-readers-json
-openai
-httpx
-pydantic
