@@ -49,33 +49,34 @@ def is_complex_chart(df, x_axis, y_axis):
 
 def main():
     st.title("Marketing Data Visualizer with Groq AI")
-    
-    uploaded_file = st.file_uploader("Upload your dataset (CSV file)", type=["csv"])
+
+    # File uploader in the sidebar
+    uploaded_file = st.sidebar.file_uploader("Upload your dataset (CSV file)", type=["csv"])
     
     if uploaded_file is not None:
-        try:
-            df = pd.read_csv(uploaded_file)
-            df, column_types = preprocess_data(df)
-            metadata = generate_metadata(df)
-            
-            # Ensure proper conversion before JSON serialization
-            with open("dataframe.json", "w") as fp:
-                json.dump(metadata, fp, default=str)
-            
-            st.success("Dataset uploaded and processed successfully!")
-            
-            # Ask user for visualization preference
-            x_axis = st.selectbox("Select X-axis:", df.columns)
-            y_axis = st.selectbox("Select Y-axis:", df.columns)
-            
-            # Add more options for plot types
-            chart_type = st.selectbox("Select Chart Type:", ["bar", "line", "scatter", "histogram", "pie", "box"])
-            
+        df = pd.read_csv(uploaded_file)
+        df, column_types = preprocess_data(df)
+        metadata = generate_metadata(df)
+
+        with open("dataframe.json", "w") as fp:
+            json.dump(metadata, fp, default=str)
+
+        st.sidebar.success("Dataset uploaded and processed successfully!")
+
+        # Sidebar selections
+        x_axis = st.sidebar.selectbox("Select X-axis:", df.columns)
+        y_axis = st.sidebar.selectbox("Select Y-axis:", df.columns)
+        chart_type = st.sidebar.selectbox("Select Chart Type:", ["bar", "line", "scatter", "histogram", "pie", "box"])
+
+        # Enter button to trigger visualization and insights
+        enter_button = st.sidebar.button("Generate Visualization")
+
+        if enter_button:
             # Ensure x and y columns are valid
             if x_axis == y_axis:
                 st.error("X-axis and Y-axis cannot be the same. Please select different columns.")
                 return
-            
+
             # Initialize Groq LLM
             llm = Groq(model="llama3-70b-8192", api_key="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")
             
@@ -105,7 +106,8 @@ def main():
                 - Suggest optimizations for marketing campaigns.
                 - Products and categories trends.
                 - Consumer preference.
-                - Sales trends.
+                - Sales trends.                
+                
             """)
             
             # Create AI Agent
@@ -151,12 +153,8 @@ def main():
             else:
                 st.warning("No insights provided by the AI.")
                 
-        except Exception as e:
-            st.error(f"Error: {str(e)}")
-            st.warning("Please make sure your dataset is in the correct format and try again.")
-            if "403" in str(e):
-                st.warning("⚠️ Possible Groq API issue! Ensure the API key is correct.")
-                st.info("👉 Possible Fixes:\n- Check API key\n- Ensure file format is correct")
-                
+        else:
+            st.info("Select options and click 'Generate Visualization'.")
+
 if __name__ == "__main__":
     main()
