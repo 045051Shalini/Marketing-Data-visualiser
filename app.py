@@ -65,4 +65,91 @@ def main():
             
             # Ask user for visualization preference
             x_axis = st.selectbox("Select X-axis:", df.columns)
-            y_axis = st.selectbox("_
+            y_axis = st.selectbox("Select Y-axis:", df.columns)
+            chart_type = st.selectbox("Select Chart Type:", ["bar", "line", "scatter"])
+            
+            # Ensure x and y columns are valid
+            if x_axis == y_axis:
+                st.error("X-axis and Y-axis cannot be the same. Please select different columns.")
+                return
+            
+            # Initialize Groq LLM
+            llm = Groq(model="llama3-70b-8192", api_key="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")
+            
+            # Create a custom prompt with the user's dataset information and focus on marketing-specific insights
+            new_prompt = PromptTemplate(f"""
+                You are an AI specialized in marketing data analysis.
+                Given the marketing dataset provided by the user, analyze the data and generate Python code for a valid visualization and provide insights specific to marketing. 
+                Consider trends, customer segments, campaign performance, and marketing metrics like conversion rates, spending, demographics, etc.
+                
+                Your task:
+                - Analyze marketing performance based on the data provided.
+                - If the chart is too complex, suggest simplifications or focus on key marketing metrics.
+                - Provide actionable marketing insights, including trends in customer acquisition, spending, campaign performance, or demographic breakdowns.
+                
+                Make sure to generate Python code for a valid chart based on the user's choices:
+                Example Chart Code:
+                ```python
+                import plotly.express as px
+                
+                fig = px.{chart_type}(df, x='{x_axis}', y='{y_axis}', title='Marketing Insights Visualization')
+                fig.update_layout(xaxis_title='{x_axis}', yaxis_title='{y_axis}')
+                fig.show()
+                ```
+                Example Insights:
+                - Analyze customer acquisition trends.
+                - Identify top-performing customer segments.
+                - Suggest optimizations for marketing campaigns.
+            """)
+            
+            # Create AI Agent
+            agent = ReActAgent.from_tools([], llm=llm, verbose=True)
+            agent.update_prompts({'agent_worker:system_prompt': new_prompt})
+            
+            # Query Groq for visualization insights
+            query = f"Generate a {chart_type} chart for '{y_axis}' over '{x_axis}'. Use the dataset provided to give marketing-specific insights."
+            response = agent.chat(query)
+            
+            # Display raw AI response for debugging
+            st.subheader("AI Response")
+            st.write(response.response)
+            
+            # Extract Python code and insights from the AI response
+            code_match = re.search(r"```python\n(.*?)```", response.response, re.DOTALL)
+            insights_match = re.search(r"Insights:\n(.*?)$", response.response, re.DOTALL)
+            
+            # Check if the chart is too complex
+            if is_complex_chart(df, x_axis, y_axis):
+                st.warning("The chart may be too complex. Here are some suggestions:\n- Try focusing on fewer categories or grouping data.\n- Consider plotting a summary or aggregate statistic.")
+            
+            if code_match:
+                extracted_code = code_match.group(1)
+                extracted_code = extracted_code.replace("pd.read_csv('your_data.csv')", "df")
+                st.code(extracted_code, language='python')
+                try:
+                    exec_locals = {"df": df}
+                    exec(extracted_code, globals(), exec_locals)
+                    if 'fig' in exec_locals:
+                        st.plotly_chart(exec_locals['fig'])
+                except Exception as e:
+                    st.error(f"Execution Error: {str(e)}")
+            else:
+                st.error("❌ No valid Python code found in AI response.")
+            
+            # Display insights if available
+            if insights_match:
+                insights_text = insights_match.group(1).strip()
+                st.subheader("Marketing Insights")
+                st.write(insights_text)
+            else:
+                st.warning("No insights provided by the AI.")
+                
+        except Exception as e:
+            st.error(f"Error: {str(e)}")
+            st.warning("Please make sure your dataset is in the correct format and try again.")
+            if "403" in str(e):
+                st.warning("⚠️ Possible Groq API issue! Ensure the API key is correct.")
+                st.info("👉 Possible Fixes:\n- Check API key\n- Ensure file format is correct")
+                
+if __name__ == "__main__":
+    main()
