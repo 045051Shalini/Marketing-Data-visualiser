@@ -118,10 +118,6 @@ def main():
             query = f"Generate a {chart_type} chart for '{y_axis}' over '{x_axis}'. Use the dataset provided to give marketing-specific insights."
             response = agent.chat(query)
             
-            # Display raw AI response for debugging
-            st.subheader("AI Response")
-            st.write(response.response)
-            
             # Extract Python code and insights from the AI response
             code_match = re.search(r"```python\n(.*?)```", response.response, re.DOTALL)
             insights_match = re.search(r"Insights:\n(.*?)$", response.response, re.DOTALL)
@@ -131,19 +127,12 @@ def main():
                 st.warning("The chart may be too complex. Here are some suggestions:\n- Try focusing on fewer categories or grouping data.\n- Consider plotting a summary or aggregate statistic.")
             
             # Display chart before insights
-            if code_match:
-                extracted_code = code_match.group(1)
-                extracted_code = extracted_code.replace("pd.read_csv('your_data.csv')", "df")
-                st.code(extracted_code, language='python')
-                try:
-                    exec_locals = {"df": df}
-                    exec(extracted_code, globals(), exec_locals)
-                    if 'fig' in exec_locals:
-                        st.plotly_chart(exec_locals['fig'])
-                except Exception as e:
-                    st.error(f"Execution Error: {str(e)}")
-            else:
-                st.error("❌ No valid Python code found in AI response.")
+            try:
+                fig = px.__getattribute__(chart_type)(df, x=x_axis, y=y_axis, title=f'{chart_type.capitalize()} Visualization')
+                fig.update_layout(xaxis_title=x_axis, yaxis_title=y_axis)
+                st.plotly_chart(fig)
+            except Exception as e:
+                st.error(f"Error creating the chart: {e}")
             
             # Display insights if available (below the chart)
             if insights_match:
@@ -152,7 +141,14 @@ def main():
                 st.write(insights_text)
             else:
                 st.warning("No insights provided by the AI.")
-                
+
+            # Button to show Python code
+            if st.button("Show Python Code"):
+                if code_match:
+                    st.code(code_match.group(1), language='python')
+                else:
+                    st.error("❌ No valid Python code found in AI response.")
+
         else:
             st.info("Select options and click 'Generate Visualization'.")
 
