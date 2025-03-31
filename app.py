@@ -28,7 +28,8 @@ def generate_metadata(df):
     """Generate dataset metadata for AI processing."""
     def return_vals(column):
         if df[column].dtype in [np.int64, np.float64]:
-            return [df[column].max(), df[column].min(), df[column].mean()]
+            # Convert numpy int64 to int for JSON serialization
+            return [int(df[column].max()), int(df[column].min()), float(df[column].mean())]
         elif df[column].dtype == 'datetime64[ns]':
             return [str(df[column].max()), str(df[column].min())]
         else:
@@ -47,8 +48,10 @@ def main():
             df = pd.read_csv(uploaded_file)
             df, column_types = preprocess_data(df)
             metadata = generate_metadata(df)
+            
+            # Ensure proper conversion before JSON serialization
             with open("dataframe.json", "w") as fp:
-                json.dump(metadata, fp)
+                json.dump(metadata, fp, default=str)  # Convert numpy types to str if necessary
             
             st.success("Dataset uploaded and processed successfully!")
             
