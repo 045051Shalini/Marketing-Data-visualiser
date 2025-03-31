@@ -8,6 +8,8 @@ from llama_index.core.agent import ReActAgent
 from llama_index.llms.groq import Groq
 from llama_index.llms.openai import OpenAI
 import plotly.express as px
+from llama_index.core.tools import QueryEngineTool
+from llama_index.core.query_engine import PandasQueryEngine
 
 def detect_column_types(df):
     """Dynamically detect column types."""
@@ -65,20 +67,21 @@ def main():
             # Initialize LLM
             llm = Groq(model="llama3-70b-8192", api_key=api_key) if "Groq" in llm_choice else OpenAI(model="gpt-4", api_key=api_key)
             
-            # Prompt AI for insights
-            ai_prompt = f"""
-                You are an AI specialized in marketing analytics. Given the dataset and the generated visualization:
-                - Identify key trends in '{x_axis}' and '{y_axis}'.
-                - Provide actionable marketing insights based on the chart.
-                - Analyze anomalies, patterns, seasonal variations, and customer behavior.
-                - Ensure insights are specific to the provided dataset and visualization.
-                {user_prompt}
-            """
-            
+            # Create a Pandas Query Engine for AI-based data analysis
             try:
-                agent = ReActAgent(llm=llm, verbose=True)  # Ensure agent is correctly initialized
-                response = agent.chat(ai_prompt)
-                insights_text = str(response)  # Ensure it's properly extracted
+                query_engine = PandasQueryEngine(df=df)
+                tool = QueryEngineTool(
+                    query_engine=query_engine,
+                    name="data_analysis_tool",
+                    description="Tool to analyze and extract insights from the dataset."
+                )
+                
+                # Initialize ReActAgent with the tool
+                agent = ReActAgent(tools=[tool], llm=llm, memory=None, verbose=True)
+                
+                # Generate insights
+                response = agent.chat(user_prompt)
+                insights_text = str(response)
             except Exception as e:
                 st.error(f"AI Model Error: {e}")
                 insights_text = "Could not generate insights."
