@@ -1,3 +1,5 @@
 streamlit
 pandas
 numpy
+llama-index-core
+llama-index-llms-groq
