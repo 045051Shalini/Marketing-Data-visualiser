@@ -1,6 +1,8 @@
 streamlit
-pandas
-numpy
 llama-index-core
 llama-index-llms-groq
-llama-index-vector-stores
+plotly
+pandas
+numpy
+datetime
+regex
