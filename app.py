@@ -1,5 +1,6 @@
 import streamlit as st
 import pandas as pd
+import plotly.express as px
 import re
 from llama_index.llms.groq import Groq
 from llama_index.core import PromptTemplate
@@ -113,7 +114,6 @@ def main():
             
             if st.button("📜 Show Python Code"):
                 st.code(f"""
-                import plotly.express as px
                 fig = px.{chart_type}(df, x='{x_axis}', y='{y_axis}', title='{chart_type.capitalize()} Visualization')
                 fig.update_layout(xaxis_title='{x_axis}', yaxis_title='{y_axis}')
                 fig.show()
