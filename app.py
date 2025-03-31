@@ -4,8 +4,6 @@ import re
 import numpy as np
 import json
 import plotly.express as px
-from llama_index.core import PromptTemplate
-from llama_index.core.agent import ReActAgent
 from llama_index.llms.groq import Groq
 from llama_index.llms.openai import OpenAI
 
@@ -15,7 +13,9 @@ def detect_column_types(df):
     for col in df.columns:
         if pd.api.types.is_numeric_dtype(df[col]):
             column_types[col] = "numeric"
-        elif pd.api.types.is_datetime64_any_dtype(df[col]) or any(isinstance(x, str) and re.search(r'\d{4}-\d{2}-\d{2}', str(x)) for x in df[col].dropna()):
+        elif pd.api.types.is_datetime64_any_dtype(df[col]) or any(
+            isinstance(x, str) and re.search(r'\d{4}-\d{2}-\d{2}', str(x)) for x in df[col].dropna()
+        ):
             df[col] = pd.to_datetime(df[col], errors='coerce')
             column_types[col] = "datetime"
         else:
@@ -28,11 +28,26 @@ def preprocess_data(df):
     column_types = detect_column_types(df)
     return df, column_types
 
+def get_ai_insights(llm, df, x_axis, y_axis, user_prompt):
+    """Generate insights using AI."""
+    dataset_info = df.describe().to_json()
+    ai_prompt = f"""
+    You are an AI specialized in marketing analytics. Analyze the dataset and generate insights.
+    Dataset Overview: {dataset_info}
+    Focus on:
+    - Key trends between {x_axis} and {y_axis}
+    - Anomalies, seasonal effects, and customer behaviors
+    - Recommendations for improving marketing strategies
+    Additional Instructions: {user_prompt}
+    Provide a structured response with key insights.
+    """
+    response = llm.complete(ai_prompt)
+    return response.text if response else "No insights available."
+
 def main():
     st.set_page_config(layout="wide")
     st.title("📊 Marketing Data Visualizer with AI Insights")
     
-    # Sidebar for input selections
     st.sidebar.header("1️⃣ Upload & Configure")
     uploaded_file = st.sidebar.file_uploader("Upload your dataset (CSV file)", type=["csv"])
     
@@ -63,25 +78,11 @@ def main():
             # Initialize LLM
             llm = Groq(model="llama3-70b-8192", api_key=api_key) if "Groq" in llm_choice else OpenAI(model="gpt-4", api_key=api_key)
             
-            # Prompt AI for insights
-            ai_prompt = f"""
-                You are an AI specialized in marketing analysis.
-                Analyze the dataset and provide insights specific to marketing trends, consumer behavior, and campaign performance.
-                Focus on:
-                - Key trends in {x_axis} and {y_axis}.
-                - Anomalies, patterns, or seasonal effects.
-                - Insights that can help improve marketing decisions.
-                {user_prompt}
-            """
-            agent = ReActAgent.from_tools([], llm=llm, verbose=True)
-            response = agent.chat(ai_prompt)
-            
-            # Extract insights
-            insights_match = re.search(r"Insights:\n(.*?)$", response.response, re.DOTALL)
-            insights_text = insights_match.group(1).strip() if insights_match else "No insights provided."
+            # Get AI insights
+            insights = get_ai_insights(llm, df, x_axis, y_axis, user_prompt)
             
             st.subheader("💡 AI-Generated Insights")
-            st.write(insights_text)
+            st.write(insights)
             
             if st.button("📜 Show Python Code"):
                 st.code(f"""
