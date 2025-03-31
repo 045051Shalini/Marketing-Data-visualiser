@@ -1,9 +1,3 @@
 streamlit
 pandas
 numpy
-json5  # JSON handling (standard json module is built-in, but json5 is useful for extended features)
-datetime  # Built-in, no need to include
-re  # Built-in, no need to include
-traceback  # Built-in, no need to include
-llama-index-core
-llama-index-llms-groq
