@@ -1,7 +1,7 @@
 import streamlit as st
 from llama_index.core import SimpleDirectoryReader, VectorStoreIndex
 from llama_index.llms.groq import Groq
-
+import traceback
 # Set API Key
 GROQ_API_KEY = "your_groq_api_key"
 
