@@ -41,7 +41,7 @@ def generate_metadata(df):
     return metadata
 
 def main():
-    st.title("Dynamic Data Visualizer with Groq AI")
+    st.title("Marketing Data Visualizer with Groq AI")
     
     uploaded_file = st.file_uploader("Upload your dataset (CSV file)", type=["csv"])
     
