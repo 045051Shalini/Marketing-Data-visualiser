@@ -6,6 +6,7 @@ import re
 import numpy as np
 import json
 from llama_index.core import PromptTemplate
+from llama_index.core.agent import ReActAgent
 def detect_column_types(df):
     """Dynamically detect column types."""
     column_types = {}
