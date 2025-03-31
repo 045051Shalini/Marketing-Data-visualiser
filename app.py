@@ -31,7 +31,6 @@ def generate_metadata(df):
     """Generate dataset metadata for AI processing."""
     def return_vals(column):
         if df[column].dtype in [np.int64, np.float64]:
-            # Convert numpy int64 to int for JSON serialization
             return [int(df[column].max()), int(df[column].min()), float(df[column].mean())]
         elif df[column].dtype == 'datetime64[ns]':
             return [str(df[column].max()), str(df[column].min())]
@@ -45,8 +44,6 @@ def is_complex_chart(df, x_axis, y_axis):
     """Determine if the chart is too complex based on the number of unique values."""
     x_unique = len(df[x_axis].unique())
     y_unique = len(df[y_axis].unique())
-    
-    # If both x and y have too many unique values, consider it a complex chart
     return x_unique > 20 or y_unique > 20
 
 def main():
@@ -62,7 +59,7 @@ def main():
             
             # Ensure proper conversion before JSON serialization
             with open("dataframe.json", "w") as fp:
-                json.dump(metadata, fp, default=str)  # Convert numpy types to str if necessary
+                json.dump(metadata, fp, default=str)
             
             st.success("Dataset uploaded and processed successfully!")
             
@@ -79,31 +76,30 @@ def main():
             # Initialize Groq LLM
             llm = Groq(model="llama3-70b-8192", api_key="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")
             
-            # Specialized marketing AI prompt
+            # Create a custom prompt with the user's dataset information and focus on marketing-specific insights
             new_prompt = PromptTemplate(f"""
                 You are an AI specialized in marketing data analysis.
-                Given a marketing dataset, generate Python code for a valid visualization and provide insights specific to marketing. 
-                For example, identify trends, customer segments, campaign performance, and other marketing metrics like conversion rates, spending, and demographics.
+                Given the marketing dataset provided by the user, analyze the data and generate Python code for a valid visualization and provide insights specific to marketing. 
+                Consider trends, customer segments, campaign performance, and marketing metrics like conversion rates, spending, demographics, etc.
                 
                 Your task:
                 - Analyze marketing performance based on the data provided.
                 - If the chart is too complex, suggest simplifications or focus on key marketing metrics.
-                - Provide actionable marketing insights such as trends in customer acquisition, spending, campaign performance, or demographic breakdowns.
-
-                Example Visualization:
+                - Provide actionable marketing insights, including trends in customer acquisition, spending, campaign performance, or demographic breakdowns.
+                
+                Make sure to generate Python code for a valid chart based on the user's choices:
+                Example Chart Code:
                 ```python
                 import plotly.express as px
                 
-                # Visualization
-                fig = px.{chart_type}(df, x='{x_axis}', y='{y_axis}', title='Marketing Visualization')
+                fig = px.{chart_type}(df, x='{x_axis}', y='{y_axis}', title='Marketing Insights Visualization')
                 fig.update_layout(xaxis_title='{x_axis}', yaxis_title='{y_axis}')
                 fig.show()
                 ```
-                
                 Example Insights:
-                - Identify trends in customer acquisition or spending patterns.
-                - Suggest ways to optimize marketing campaigns based on the data.
-                - Identify high-performing customer segments or campaigns.
+                - Analyze customer acquisition trends.
+                - Identify top-performing customer segments.
+                - Suggest optimizations for marketing campaigns.
             """)
             
             # Create AI Agent
@@ -111,18 +107,18 @@ def main():
             agent.update_prompts({'agent_worker:system_prompt': new_prompt})
             
             # Query Groq for visualization insights
-            query = f"Generate a {chart_type} chart for '{y_axis}' over '{x_axis}'. Ensure proper styling and provide marketing-specific insights."
+            query = f"Generate a {chart_type} chart for '{y_axis}' over '{x_axis}'. Use the dataset provided to give marketing-specific insights."
             response = agent.chat(query)
             
-            # Debug: Show raw AI response in Streamlit
+            # Display raw AI response for debugging
             st.subheader("AI Response")
             st.write(response.response)
             
-            # Extract Python code from AI response
+            # Extract Python code and insights from the AI response
             code_match = re.search(r"```python\n(.*?)```", response.response, re.DOTALL)
             insights_match = re.search(r"Insights:\n(.*?)$", response.response, re.DOTALL)
             
-            # Check if chart is too complex
+            # Check if the chart is too complex
             if is_complex_chart(df, x_axis, y_axis):
                 st.warning("The chart may be too complex. Here are some suggestions:\n- Try focusing on fewer categories or grouping data.\n- Consider plotting a summary or aggregate statistic.")
             
@@ -139,16 +135,15 @@ def main():
                     st.error(f"Execution Error: {str(e)}")
             else:
                 st.error("❌ No valid Python code found in AI response.")
-                st.info("👉 Possible reasons:\n- API key issue\n- LLM failed to generate proper code\n- Formatting issue")
             
-            # Display insights in Streamlit window
+            # Display insights if available
             if insights_match:
                 insights_text = insights_match.group(1).strip()
                 st.subheader("Marketing Insights")
                 st.write(insights_text)
             else:
                 st.warning("No insights provided by the AI.")
-            
+                
         except Exception as e:
             st.error(f"Error: {str(e)}")
             st.warning("Please make sure your dataset is in the correct format and try again.")
@@ -158,4 +153,3 @@ def main():
                 
 if __name__ == "__main__":
     main()
-
