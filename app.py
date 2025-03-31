@@ -1,88 +1,99 @@
 import streamlit as st
 import pandas as pd
+import re
 import numpy as np
 import json
 import plotly.express as px
-import re
 from llama_index.core import PromptTemplate
-from llama_index.llms.groq import Groq
 from llama_index.core.agent import ReActAgent
+from llama_index.llms.groq import Groq
+from llama_index.llms.openai import OpenAI
+
+def detect_column_types(df):
+    column_types = {}
+    for col in df.columns:
+        if pd.api.types.is_numeric_dtype(df[col]):
+            column_types[col] = "numeric"
+        elif pd.api.types.is_datetime64_any_dtype(df[col]) or any(isinstance(x, str) and re.search(r'\d{4}-\d{2}-\d{2}', str(x)) for x in df[col].dropna()):
+            df[col] = pd.to_datetime(df[col], errors='coerce')
+            column_types[col] = "datetime"
+        else:
+            column_types[col] = "categorical"
+    return column_types
 
 def preprocess_data(df):
-    """Handle missing values and convert data types dynamically."""
     df = df.fillna(0)
-    return df
-
-def generate_metadata(df):
-    """Generate dataset metadata for AI processing."""
-    def return_vals(column):
-        if df[column].dtype in [np.int64, np.float64]:
-            return [int(df[column].max()), int(df[column].min()), float(df[column].mean())]
-        else:
-            return list(df[column].value_counts().head(10).index)
-    
-    metadata = {col: {'column_name': col, 'type': str(df[col].dtype), 'variable_information': return_vals(col)} for col in df.columns}
-    return metadata
-
-def generate_visualization(df, x_axis, y_axis, chart_type):
-    """Create the requested visualization."""
-    try:
-        fig = px.__getattribute__(chart_type)(df, x=x_axis, y=y_axis, title=f'{chart_type.capitalize()} Visualization')
-        fig.update_layout(xaxis_title=x_axis, yaxis_title=y_axis)
-        return fig
-    except Exception as e:
-        st.error(f"Error creating the chart: {e}")
-        return None
+    column_types = detect_column_types(df)
+    return df, column_types
 
 def main():
-    st.title("Marketing Data Visualizer with AI Insights")
-
-    uploaded_file = st.sidebar.file_uploader("Upload your dataset (CSV file)", type=["csv"])
+    st.set_page_config(layout="wide")
+    st.title("Marketing Data Visualizer with AI")
     
-    if uploaded_file is not None:
+    # Sidebar inputs
+    st.sidebar.header("Upload & Configure")
+    uploaded_file = st.sidebar.file_uploader("Upload CSV file", type=["csv"])
+    llm_provider = st.sidebar.selectbox("Choose LLM", ["Groq", "OpenAI"])
+    api_key = st.sidebar.text_input("Enter API Key", type="password")
+    
+    if uploaded_file and api_key:
         df = pd.read_csv(uploaded_file)
-        df = preprocess_data(df)
-        metadata = generate_metadata(df)
-
-        with open("dataframe.json", "w") as fp:
-            json.dump(metadata, fp, default=str)
-
-        st.sidebar.success("Dataset uploaded and processed successfully!")
-
-        x_axis = st.sidebar.selectbox("Select X-axis:", df.columns)
-        y_axis = st.sidebar.selectbox("Select Y-axis:", df.columns)
-        chart_type = st.sidebar.selectbox("Select Chart Type:", ["bar", "line", "scatter", "histogram", "pie", "box"])
-
+        df, column_types = preprocess_data(df)
+        st.sidebar.success("Dataset processed successfully!")
+        
+        x_axis = st.sidebar.selectbox("Select X-axis", df.columns)
+        y_axis = st.sidebar.selectbox("Select Y-axis", df.columns)
+        chart_type = st.sidebar.selectbox("Select Chart Type", ["bar", "line", "scatter", "histogram", "pie", "box"])
         generate_button = st.sidebar.button("Generate Visualization")
-
+        
+        # LLM selection
+        llm = Groq(model="llama3-70b-8192", api_key=api_key) if llm_provider == "Groq" else OpenAI(model="gpt-4", api_key=api_key)
+        
         if generate_button:
             if x_axis == y_axis:
-                st.error("X-axis and Y-axis cannot be the same. Please select different columns.")
+                st.error("X-axis and Y-axis cannot be the same.")
                 return
             
-            fig = generate_visualization(df, x_axis, y_axis, chart_type)
-            if fig:
-                st.plotly_chart(fig)
-            
-            # AI Insights
-            llm = Groq(model="llama3-70b-8192", api_key="YOUR_GROQ_API_KEY")
+            # AI prompt
             prompt = PromptTemplate(f"""
-                Analyze the dataset and provide insights into marketing trends, customer behavior, and sales performance.
-                Consider key factors such as sales patterns, customer demographics, and campaign success.
+                You are an AI specialized in marketing data analysis. 
+                Given the dataset provided by the user, generate Python code to visualize the selected X-axis ({x_axis}) and Y-axis ({y_axis}) as a {chart_type} chart.
+                Also, provide marketing insights based on trends, customer behavior, and key performance indicators.
             """)
-            
             agent = ReActAgent.from_tools([], llm=llm, verbose=True)
             agent.update_prompts({'agent_worker:system_prompt': prompt})
-            response = agent.chat("Provide insights from the dataset.")
-
+            query = f"Generate a {chart_type} chart for '{y_axis}' over '{x_axis}' and give marketing insights."
+            response = agent.chat(query)
+            
+            # Extract Python code and insights
+            code_match = re.search(r"```python\n(.*?)```", response.response, re.DOTALL)
             insights_match = re.search(r"Insights:\n(.*?)$", response.response, re.DOTALL)
             
+            # Generate chart
+            try:
+                fig = px.__getattribute__(chart_type)(df, x=x_axis, y=y_axis, title=f'{chart_type.capitalize()} Visualization')
+                fig.update_layout(xaxis_title=x_axis, yaxis_title=y_axis)
+                st.plotly_chart(fig)
+            except Exception as e:
+                st.error(f"Error creating the chart: {e}")
+            
+            # Show insights
             if insights_match:
                 insights_text = insights_match.group(1).strip()
                 st.subheader("Marketing Insights")
                 st.write(insights_text)
             else:
-                st.warning("No insights provided by the AI.")
+                st.warning("No insights provided by AI.")
+            
+            # Show Python code button
+            if st.button("Show Python Code"):
+                if code_match:
+                    st.code(code_match.group(1), language='python')
+                else:
+                    st.error("No valid Python code found.")
+    else:
+        st.info("Upload a CSV file and enter an API key to proceed.")
 
 if __name__ == "__main__":
     main()
+
