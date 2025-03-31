@@ -1,7 +1,6 @@
 import streamlit as st
 import pandas as pd
 import plotly.express as px
-from llama_index import SimpleDirectoryReader
 from llama_index.llms.groq import Groq
 from llama_index.core import PromptTemplate
 from llama_index.core.agent import ReActAgent
