@@ -92,10 +92,11 @@ def handle_user_question(llm, df, question, context):
         - Potential next steps
         """
     )
+    # Change to using to_string() instead of to_markdown()
     qa_prompt = prompt_template.format(
         context=context,
         columns=list(df.columns),
-        sample_data=df.head(3).to_markdown(),
+        sample_data=df.head(3).to_string(),
         question=question
     )
     try:
