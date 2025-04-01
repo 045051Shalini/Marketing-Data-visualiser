@@ -29,12 +29,12 @@ if uploaded_file and api_key:
         llm = Groq(model="llama3-70b-8192", api_key=api_key)
         agent = ReActAgent.from_tools([], llm=llm, verbose=True)
 
-        # Get detailed context for the chart
-        chart_description = f"The chart visualizes the relationship between {x_axis} (x-axis) and {y_axis} (y-axis)."
-
-        # Pass chart data and user prompt for AI insight generation
+        # Pass the raw data and user prompt for AI insight generation
         ai_prompt = f"""
-        Analyze the provided data and chart, which shows {chart_description}.
+        I am analyzing a chart that shows the relationship between {x_axis} (x-axis) and {y_axis} (y-axis) using a {chart_type} chart.
+        Here is the data from the chart:
+        {df[[x_axis, y_axis]].to_dict(orient='records')}
+        Please analyze this data and provide insights on the trends, patterns, and any key takeaways.
         {user_prompt}
         """
         
