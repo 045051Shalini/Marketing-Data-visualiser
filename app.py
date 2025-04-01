@@ -4,7 +4,8 @@ import plotly.express as px
 import requests
 import re
 
-#_CONFIG = {
+# Configuration
+THEME_CONFIG = {
     "primaryColor": "#4f8bff",
     "backgroundColor": "#0e1117",
     "textColor": "#f0f2f6"
