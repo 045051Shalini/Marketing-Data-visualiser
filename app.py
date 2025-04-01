@@ -72,9 +72,9 @@ def generate_visualization_code(llm, df, chart_type, x_col, y_col):
 
 # Extract code and insights from the generated response
 def extract_code_and_insights(response):
-    # Regular expression to extract code and insights
-    code_match = re.search(r"```python\n(.*?)```", response, re.DOTALL)
-    insights_match = re.search(r"Insights:(.*?$)", response, re.DOTALL)
+    # Improved regular expressions to extract code and insights from the response
+    code_match = re.search(r'```python\n(.*?)```', response, re.DOTALL)
+    insights_match = re.search(r'Insights:(.*)', response, re.DOTALL)
 
     code = code_match.group(1).strip() if code_match else None
     insights = insights_match.group(1).strip() if insights_match else "No insights provided."
