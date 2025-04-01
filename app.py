@@ -66,7 +66,7 @@ def generate_visualization_code(llm, df, chart_type, x_col, y_col):
         return None
 
 def extract_code_and_insights(response):
-    # Look for the code wrapped in triple backticks and insights after it.
+    # Check for the code block in the response
     if "```python" in response:
         code_start = response.find("```python") + len("```python")
         code_end = response.find("```", code_start)
@@ -74,7 +74,7 @@ def extract_code_and_insights(response):
     else:
         code = None
 
-    # Find insights after 'Insights:' keyword
+    # Now look for insights after 'Insights:' keyword
     insights_start = response.find("Insights:")
     if insights_start != -1:
         insights = response[insights_start + len("Insights:"):].strip()
