@@ -47,9 +47,7 @@ if uploaded_file and api_key:
     # Save metadata as JSON
     with open("dataframe.json", "w") as fp:
         json.dump(dict_, fp)
-    
-    # Load metadata
-    reader = JSONReader()
+ 
     documents = reader.load_data(input_file='dataframe.json')
     dataframe_index = VectorStoreIndex.from_documents(documents)
     
