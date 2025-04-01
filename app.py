@@ -63,6 +63,10 @@ def generate_visualization_code(llm, df, chart_type, x_col, y_col):
         st.error(f"API Error: {str(e)}")
         return None
 
+def clean_code(code_block):
+    """Clean the code block by removing triple backticks and extra spaces"""
+    return code_block.strip().replace("```python", "").replace("```", "").strip()
+
 def execute_visualization_code(code_block, df):
     """Safely execute visualization code"""
     try:
@@ -145,7 +149,7 @@ def main():
                         insights_match = re.search(r"Insights:(.*?$)", response, re.DOTALL)
                         
                         if code_match:
-                            code = code_match.group(1)
+                            code = clean_code(code_match.group(1))
                             st.subheader("Generated Python Code")
                             st.code(code, language="python")
                             
