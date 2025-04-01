@@ -3,7 +3,6 @@ import pandas as pd
 import plotly.express as px
 from llama_index.llms.groq import Groq
 from llama_index.core.agent import ReActAgent
-from llama_index.prompts import PromptTemplate
 from llama_index.tools import QueryEngineTool, ToolMetadata
 import json
 import re
