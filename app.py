@@ -153,18 +153,3 @@ if uploaded_file and api_key:
             st.error("No valid Python code found in response.")
 else:
     st.info("Upload a dataset and enter your API key to proceed.")
-Key Improvements:
-Metadata Extraction: Added code to extract and store metadata from the dataset.
-Styling Instructions: Included detailed styling instructions for different types of charts.
-Query Engines: Built query engines for dataset insights and styling instructions.
-Enhanced Error Handling: Improved error handling for executing the generated code.
-Try running this updated code in your Streamlit app. If you encounter any issues or need further customization, let me know!
-
-
-Edit in Pages
-
-
-
-
-
-AI-generated content may be incorrect
