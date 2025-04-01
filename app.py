@@ -68,9 +68,11 @@ def generate_visualization_code(llm, df, chart_type, x_col, y_col):
 
 def execute_visualization_code(code_block, df):
     try:
-
         # Define the execution context (with 'df' and 'px' as required)
         exec_globals = {'df': df, 'px': px}
+
+        # Clean the code (removing triple backticks and other unwanted parts)
+        clean_code = code_block.strip().replace("```python", "").replace("```", "").strip()
 
         # Execute the cleaned code
         exec(clean_code, exec_globals)
@@ -81,6 +83,7 @@ def execute_visualization_code(code_block, df):
     except Exception as e:
         st.error(f"Execution Error: {str(e)}")
         return None
+
 # Handle user questions and generate responses based on the data
 def handle_user_question(llm, df, question, context):
     prompt_template = PromptTemplate(
