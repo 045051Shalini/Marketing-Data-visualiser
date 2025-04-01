@@ -156,7 +156,7 @@ def main():
                             if st.button("Copy Code to Clipboard"):
                                 pyperclip.copy(code)
                                 st.success("Code copied to clipboard!")
-                                
+                                                
                             fig = execute_visualization_code(code, df)
                             if fig:
                                 st.plotly_chart(fig, use_container_width=True)
