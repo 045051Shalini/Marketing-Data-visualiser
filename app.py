@@ -1,3 +1,4 @@
+
 import streamlit as st
 import pandas as pd
 import plotly.express as px
@@ -29,6 +30,15 @@ def preprocess_data(df):
     df = df.fillna(0)
     column_types = detect_column_types(df)
     return df, column_types
+
+def generate_chart(df, x_axis, y_axis, chart_type):
+    """Generate chart using Plotly Express."""
+    try:
+        fig = px.__getattribute__(chart_type)(df, x=x_axis, y=y_axis, title=f'{chart_type.capitalize()} Visualization')
+        fig.update_layout(xaxis_title=x_axis, yaxis_title=y_axis)
+        return fig
+    except Exception as e:
+        return str(e)
 
 def generate_insights(df, x_axis, y_axis, user_prompt, llm):
     """Generate insights using ReActAgent."""
@@ -71,13 +81,11 @@ def main():
         
         if generate_button:
             st.subheader("📈 Visualization")
-            try:
-                fig = px.__getattribute__(chart_type)(df, x=x_axis, y=y_axis, title=f'{chart_type.capitalize()} Visualization')
-                fig.update_layout(xaxis_title=x_axis, yaxis_title=y_axis)
+            fig = generate_chart(df, x_axis, y_axis, chart_type)
+            if isinstance(fig, str):
+                st.error(f"Error generating chart: {fig}")
+            else:
                 st.plotly_chart(fig)
-            except Exception as e:
-                st.error(f"Error generating chart: {e}")
-                return
             
             # Initialize LLM
             llm = Groq(model="llama3-70b-8192", api_key=api_key) if "Groq" in llm_choice else OpenAI(model="gpt-4", api_key=api_key)
@@ -101,4 +109,4 @@ def main():
         st.info("Upload a dataset and enter an API key to proceed.")
 
 if __name__ == "__main__":
-     main()
+    main()
