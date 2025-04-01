@@ -60,6 +60,7 @@ def generate_visualization_code(llm, df, chart_type, x_col, y_col):
     try:
         agent = ReActAgent.from_tools([], llm=llm, verbose=True)
         response = agent.chat(system_prompt)
+        st.write(response)  # Displaying the raw response from the model for debugging
         return response.response
     except Exception as e:
         st.error(f"API Error: {str(e)}")
