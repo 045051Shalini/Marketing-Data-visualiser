@@ -39,18 +39,22 @@ def generate_chart(df, x_axis, y_axis, chart_type):
     except Exception as e:
         return str(e)
 
-def generate_insights(df, x_axis, y_axis, user_prompt, llm):
+def generate_insights(df, x_axis, y_axis, chart_type, user_prompt, llm):
     """Generate insights using ReActAgent."""
-    agent = ReActAgent.from_tools([], llm=llm, verbose=True)
-    
+    agent = ReActAgent.from_tools([], llm=llm, verbose=True, max_iterations=5)  # Limit iterations
+
     ai_prompt = f"""
         Analyze the dataset and the generated {chart_type} chart with '{x_axis}' on the x-axis and '{y_axis}' on the y-axis.
         Provide key trends and actionable insights.
         {user_prompt}
     """
     
-    response = agent.chat(ai_prompt)
-    insights_text = response.response if response.response else "No insights provided by AI."
+    try:
+        response = agent.chat(ai_prompt)
+        insights_text = response.response if response.response else "No insights provided by AI."
+    except Exception as e:
+        insights_text = f"Error generating insights: {e}"
+    
     return insights_text
 
 def main():
@@ -87,10 +91,13 @@ def main():
             llm = Groq(model="llama3-70b-8192", api_key=api_key) if "Groq" in llm_choice else OpenAI(model="gpt-4", api_key=api_key)
             
             # Generate insights
-            insights_text = generate_insights(df, x_axis, y_axis, user_prompt, llm)
+            insights_text = generate_insights(df, x_axis, y_axis, chart_type, user_prompt, llm)
             
             st.subheader("💡 AI-Generated Insights")
             st.write(insights_text)
+            
+            # Debug output (optional)
+            st.write("🛠 Debug: AI Response ->", insights_text)
             
             # Show Python Code Button
             if st.button("📜 Show Python Code"):
