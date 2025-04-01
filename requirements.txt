@@ -6,5 +6,5 @@ pandas
 numpy
 datetime
 regex
-langchain
+pyperclip
 tabulate
