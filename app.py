@@ -149,9 +149,9 @@ def main():
                     response = generate_visualization_code(llm, df, chart_type, x_col, y_col)
                     if response:
                         # Check if code is correctly formatted
-                        if "```python" in response:
-                            start = response.index("```python") + len("```python")
-                            end = response.index("```", start)
+                        if "```" in response:
+                            start = response.index("```") + len("```")
+                            end = response.rindex("```")
                             code_block = response[start:end].strip()
                             
                             # Display the code in the app
