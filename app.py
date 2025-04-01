@@ -148,4 +148,41 @@ def main():
                         insights_match = re.search(r"Insights:\s*(.*)", response, re.DOTALL)
                         
                         if code_match:
-                            code = clean_code(code_match
+                            code = clean_code(code_match.group(1))
+                            st.subheader("Generated Python Code")
+                            st.code(code, language="python")
+                            
+                            execution_result = execute_visualization_code(code)
+                            st.text(execution_result)
+                            
+                            # Display insights
+                            if insights_match:
+                                insights = insights_match.group(1).strip()
+                                st.subheader("Insights")
+                                st.markdown(insights)
+                            else:
+                                st.warning("No insights generated")
+                        else:
+                            st.error("No valid code generated")
+                            st.code(response)  # Debug output
+
+        with col2:
+            with st.expander("🔍 Data Preview"):
+                st.dataframe(df.head(10), height=300)
+                
+            with st.expander("📝 Ask Question"):
+                user_question = st.text_input("Enter your question:")
+                if user_question:
+                    context = f"""
+                        Visualization Context:
+                        - Type: {chart_type}
+                        - X: {x_col} ({df[x_col].dtype})
+                        - Y: {y_col} ({df[y_col].dtype})
+                        - Sample X Values: {df[x_col].sample(3).tolist()}
+                        - Sample Y Values: {df[y_col].sample(3).tolist()}
+                    """
+                    answer = handle_user_question(llm, df, user_question, context)
+                    st.markdown(f"**AI Analysis:**\n{answer}")
+
+if __name__ == "__main__":
+    main()
