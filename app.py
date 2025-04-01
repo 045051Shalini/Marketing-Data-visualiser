@@ -101,3 +101,4 @@ def main():
         st.info("Upload a dataset and enter an API key to proceed.")
 
 if __name__ == "__main__":
+     main()
