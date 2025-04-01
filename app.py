@@ -48,8 +48,6 @@ if uploaded_file and api_key:
     with open("dataframe.json", "w") as fp:
         json.dump(dict_, fp)
  
-    documents = reader.load_data(input_file='dataframe')
-    dataframe_index = VectorStoreIndex.from_documents(documents)
     
     # Define styling instructions
     styling_instructions = [
