@@ -4,7 +4,7 @@ import plotly.express as px
 from llama_index.llms.groq import Groq
 from llama_index.core.agent import ReActAgent
 from llama_index.core import PromptTemplate
-import re  # Importing regex to help with parsing the code
+import pyperclip  # To allow copying to clipboard
 
 # Configure Streamlit layout and page settings
 def configure_streamlit():
@@ -150,6 +150,12 @@ def main():
                     if response:
                         code = extract_code_and_insights(response)
                         if code:
+                            # Show the code and provide a button to copy it to clipboard
+                            st.code(code, language="python")
+                            if st.button("Copy Code to Clipboard"):
+                                pyperclip.copy(code)
+                                st.success("Code copied to clipboard!")
+                                
                             fig = execute_visualization_code(code, df)
                             if fig:
                                 st.plotly_chart(fig, use_container_width=True)
