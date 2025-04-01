@@ -4,6 +4,7 @@ import plotly.express as px
 from llama_index.llms.groq import Groq
 from llama_index.core.agent import ReActAgent
 from llama_index.core import PromptTemplate
+import re  # Importing regex to help with parsing the code
 
 # Configure Streamlit layout and page settings
 def configure_streamlit():
@@ -60,24 +61,18 @@ def generate_visualization_code(llm, df, chart_type, x_col, y_col):
     try:
         agent = ReActAgent.from_tools([], llm=llm, verbose=True)
         response = agent.chat(system_prompt)
-        st.write("Raw response:", response)  # Displaying the raw response from the model for debugging
         return response.response
     except Exception as e:
         st.error(f"API Error: {str(e)}")
         return None
 
-# Extract code and insights from the generated response
+# Extract code using regular expressions and Streamlit's markdown features
 def extract_code_and_insights(response):
-    # Look for the code block wrapped in triple backticks
-    start_code = "```python\n"
-    end_code = "```"
+    # Regex to extract Python code block
+    match = re.search(r'```python\n(.*?)\n```', response, re.DOTALL)
     
-    if start_code in response and end_code in response:
-        code_start = response.index(start_code) + len(start_code)
-        code_end = response.index(end_code)
-        code = response[code_start:code_end].strip()
-        
-        return code
+    if match:
+        return match.group(1).strip()  # Return the code block as a string
     else:
         return None
 
