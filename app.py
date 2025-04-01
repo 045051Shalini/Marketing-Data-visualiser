@@ -1,14 +1,14 @@
 import streamlit as st
 import pandas as pd
 import plotly.express as px
-from llama_index import GPTSimpleVectorIndex
+from llama_index import GPTIndex
 from llama_index.llms.groq import Groq
 
 # Initialize LlamaIndex
 def initialize_llama_index(api_key):
     try:
         llm = Groq(model="llama3-70b-8192", api_key=api_key)
-        index = GPTSimpleVectorIndex(llm=llm)
+        index = GPTIndex(llm=llm)
         return index
     except Exception as e:
         st.error(f"Error initializing LlamaIndex: {e}")
