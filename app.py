@@ -1,5 +1,6 @@
 import streamlit as st
 import pandas as pd
+import plotly.express as px
 from llama_index.llms.groq import Groq
 from llama_index.core.agent import ReActAgent
 
@@ -44,10 +45,15 @@ if uploaded_file and api_key:
         st.subheader("💬 Generated Python Code:")
         st.code(generated_code, language="python")
         
-        # Try to execute the generated code and display the chart
+        # Try to execute the generated code and display the chart using Plotly
         try:
+            # Execute the generated code to create the chart
             exec(generated_code)
-            st.pyplot()  # Display the generated plot (from executed code)
+            # Assuming the chart is stored in a variable called `fig`
+            if 'fig' in locals():
+                st.plotly_chart(fig)  # Display the Plotly chart
+            else:
+                st.error("No chart generated. Please check the generated code.")
         except Exception as e:
             st.error(f"Error executing the generated code: {e}")
 
