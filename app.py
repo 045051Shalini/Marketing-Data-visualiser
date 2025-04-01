@@ -1,4 +1,3 @@
-
 import streamlit as st
 import pandas as pd
 import plotly.express as px
@@ -45,11 +44,8 @@ def generate_insights(df, x_axis, y_axis, user_prompt, llm):
     agent = ReActAgent.from_tools([], llm=llm, verbose=True)
     
     ai_prompt = f"""
-        You are an AI specialized in marketing analytics. Given the dataset and the generated visualization:
-        - Identify key trends in '{x_axis}' and '{y_axis}'.
-        - Provide actionable marketing insights based on the chart.
-        - Analyze anomalies, patterns, seasonal variations, and customer behavior.
-        - Ensure insights are specific to the provided dataset and visualization.
+        Analyze the dataset and the generated {chart_type} chart with '{x_axis}' on the x-axis and '{y_axis}' on the y-axis.
+        Provide key trends and actionable insights.
         {user_prompt}
     """
     
