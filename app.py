@@ -4,6 +4,7 @@ import plotly.express as px
 import re
 from llama_index.llms.groq import Groq
 from llama_index.core.agent import ReActAgent
+from llama_index.core import PromptTemplate
 
 def configure_streamlit():
     st.set_page_config(
@@ -19,16 +20,27 @@ def validate_data(df):
     return True
 
 def generate_visualization_code(llm, df, chart_type, x_col, y_col):
-    system_prompt = f"""
-    You are a data visualization expert. Generate Plotly Express Python code following these conditions:
-    - Use the DataFrame 'df'.
-    - Chart type: {chart_type}.
-    - X-axis: {x_col} (Type: {df[x_col].dtype}).
-    - Y-axis: {y_col} (Type: {df[y_col].dtype}).
-    - Ensure correct data handling for categorical and numerical data.
-    - Use modern color schemes and proper labels.
-    - Return only the Python code wrapped in triple backticks.
-    """
+    prompt_template = PromptTemplate(
+        """
+        You are a data visualization expert. Generate Plotly Express Python code following these conditions:
+        - Use the DataFrame 'df'.
+        - Chart type: {chart_type}.
+        - X-axis: {x_col} (Type: {x_dtype}).
+        - Y-axis: {y_col} (Type: {y_dtype}).
+        - Ensure correct data handling for categorical and numerical data.
+        - Use modern color schemes and proper labels.
+        - Return only the Python code wrapped in triple backticks.
+        """
+    )
+    
+    system_prompt = prompt_template.format(
+        chart_type=chart_type,
+        x_col=x_col,
+        x_dtype=df[x_col].dtype,
+        y_col=y_col,
+        y_dtype=df[y_col].dtype
+    )
+    
     try:
         agent = ReActAgent.from_tools([], llm=llm, verbose=False)
         response = agent.chat(system_prompt)
