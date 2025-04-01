@@ -1,8 +1,8 @@
 import streamlit as st
 import pandas as pd
 import plotly.express as px
+from llama_index import LlamaIndex
 from llama_index.llms.groq import Groq
-from llama_index.indices.service_context import ServiceContextSimple
 
 # Initialize LlamaIndex
 def initialize_llama_index(api_key):
@@ -15,22 +15,10 @@ def initialize_llama_index(api_key):
         return None
 
 # Generate insights using LlamaIndex
-def generate_insights(index, df, x_axis, y_axis, user_prompt):
+def generate_insights(index, prompt):
     try:
-        # Create a ServiceContextSimple to store the data
-        context = ServiceContextSimple(df)
-
-        # Define the prompt for the AI agent
-        prompt = f"""
-            Analyze the data in the '{x_axis}' and '{y_axis}' columns.
-            Generate actionable marketing insights based on the chart.
-            {user_prompt}
-        """
-
-        # Use the LlamaIndex to generate insights
-        insights = index.query(prompt, context=context)
-
-        return insights
+        response = index.query(prompt)
+        return response
     except Exception as e:
         st.error(f"Error generating insights: {e}")
         return None
@@ -70,8 +58,15 @@ def main():
             if index is None:
                 return
 
+            # Define the prompt for the AI agent
+            prompt = f"""
+                Analyze the data in the '{x_axis}' and '{y_axis}' columns.
+                Generate actionable marketing insights based on the chart.
+                {user_prompt}
+            """
+
             # Generate insights using LlamaIndex
-            insights = generate_insights(index, df, x_axis, y_axis, user_prompt)
+            insights = generate_insights(index, prompt)
             if insights is None:
                 return
 
@@ -81,14 +76,4 @@ def main():
             # Show Python Code Button
             if st.button("📜 Show Python Code"):
                 python_code = f"""
-                import plotly.express as px
-                fig = px.{chart_type}(df, x='{x_axis}', y='{y_axis}', title='{chart_type.capitalize()} Visualization')
-                fig.update_layout(xaxis_title='{x_axis}', yaxis_title='{y_axis}')
-                fig.show()
-                """
-                st.code(python_code, language='python')
-    else:
-        st.info("Upload a dataset and enter your Groq API key to proceed.")
-
-if __name__ == "__main__":
-    main()
+                import plotly
