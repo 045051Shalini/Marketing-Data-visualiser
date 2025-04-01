@@ -70,13 +70,10 @@ def main():
                 st.error(f"Error initializing LLM: {e}")
                 return
             
-            # Prompt AI for insights
+            # Simplified Prompt for AI Insights
             ai_prompt = f"""
-                You are an AI specialized in marketing analytics. Given the dataset and the generated visualization:
-                - Identify key trends in '{x_axis}' and '{y_axis}'.
-                - Provide actionable marketing insights based on the chart.
-                - Analyze anomalies, patterns, seasonal variations, and customer behavior.
-                - Ensure insights are specific to the provided dataset and visualization.
+                Analyze the dataset and the generated {chart_type} chart with '{x_axis}' on the x-axis and '{y_axis}' on the y-axis.
+                Provide key trends and actionable insights.
                 {user_prompt}
             """
             
