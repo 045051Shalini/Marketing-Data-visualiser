@@ -2,12 +2,13 @@ import streamlit as st
 import pandas as pd
 import plotly.express as px
 import re
-import json
 import numpy as np
 from llama_index.core import PromptTemplate
 from llama_index.core.agent import ReActAgent
 from llama_index.llms.groq import Groq
 from llama_index.llms.openai import OpenAI
+from llama_index.tools import QueryEngineTool
+from llama_index.query_engine import PandasQueryEngine
 
 def detect_column_types(df):
     """Dynamically detect column types."""
@@ -39,23 +40,27 @@ def generate_chart(df, x_axis, y_axis, chart_type):
     except Exception as e:
         return str(e)
 
-def generate_insights(df, x_axis, y_axis, chart_type, user_prompt, llm):
-    """Generate insights using ReActAgent."""
-    agent = ReActAgent.from_tools([], llm=llm, verbose=True, max_iterations=5)  # Limit iterations
-
-    ai_prompt = f"""
-        Analyze the dataset and the generated {chart_type} chart with '{x_axis}' on the x-axis and '{y_axis}' on the y-axis.
-        Provide key trends and actionable insights.
-        {user_prompt}
-    """
-    
+def generate_insights(df, x_axis, y_axis, user_prompt, llm):
+    """Generate insights using ReActAgent with tools."""
     try:
+        # Create a Pandas Query Engine tool
+        query_engine = PandasQueryEngine(df)
+        tools = [QueryEngineTool.from_defaults(query_engine)]
+
+        # Initialize AI Agent with tools
+        agent = ReActAgent.from_tools(tools, llm=llm, verbose=True)
+
+        ai_prompt = f"""
+        Analyze the dataset and the generated chart type with '{x_axis}' on the x-axis and '{y_axis}' on the y-axis.
+        Provide key trends, statistical analysis, and actionable insights.
+        {user_prompt}
+        """
+        
         response = agent.chat(ai_prompt)
         insights_text = response.response if response.response else "No insights provided by AI."
+        return insights_text
     except Exception as e:
-        insights_text = f"Error generating insights: {e}"
-    
-    return insights_text
+        return f"Error generating insights: {e}"
 
 def main():
     st.set_page_config(layout="wide")
@@ -91,13 +96,10 @@ def main():
             llm = Groq(model="llama3-70b-8192", api_key=api_key) if "Groq" in llm_choice else OpenAI(model="gpt-4", api_key=api_key)
             
             # Generate insights
-            insights_text = generate_insights(df, x_axis, y_axis, chart_type, user_prompt, llm)
+            insights_text = generate_insights(df, x_axis, y_axis, user_prompt, llm)
             
             st.subheader("💡 AI-Generated Insights")
             st.write(insights_text)
-            
-            # Debug output (optional)
-            st.write("🛠 Debug: AI Response ->", insights_text)
             
             # Show Python Code Button
             if st.button("📜 Show Python Code"):
