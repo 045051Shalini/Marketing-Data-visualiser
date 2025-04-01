@@ -1,13 +1,13 @@
 import streamlit as st
 import pandas as pd
 import plotly.express as px
-from llama_index.llms.openai import OpenAI
+from llama_index.llms.groq import Groq
 from llama_index.indices.service_context import ServiceContextSimple
 
 # Initialize LlamaIndex
 def initialize_llama_index(api_key):
     try:
-        llm = OpenAI(model="gpt-4", api_key=api_key)
+        llm = Groq(model="llama3-70b-8192", api_key=api_key)
         index = LlamaIndex(llm=llm)
         return index
     except Exception as e:
@@ -43,7 +43,7 @@ def main():
     st.sidebar.header("1️⃣ Upload & Configure")
     uploaded_file = st.sidebar.file_uploader("Upload your dataset (CSV file)", type=["csv"])
 
-    api_key = st.sidebar.text_input("Enter API Key", type="password")
+    api_key = st.sidebar.text_input("Enter Groq API Key", type="password")
 
     if uploaded_file is not None and api_key:
         df = pd.read_csv(uploaded_file)
@@ -88,7 +88,7 @@ def main():
                 """
                 st.code(python_code, language='python')
     else:
-        st.info("Upload a dataset and enter an API key to proceed.")
+        st.info("Upload a dataset and enter your Groq API key to proceed.")
 
 if __name__ == "__main__":
     main()
