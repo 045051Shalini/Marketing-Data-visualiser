@@ -3,6 +3,9 @@ import pandas as pd
 import plotly.express as px
 import requests
 import re
+from llama_index.llms.groq import Groq
+from llama_index.core.agent import ReActAgent
+from llama_index.core import PromptTemplate
 
 # Configuration
 THEME_CONFIG = {
