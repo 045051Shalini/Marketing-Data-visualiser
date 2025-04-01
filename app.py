@@ -1,115 +1,95 @@
 import streamlit as st
 import pandas as pd
 import plotly.express as px
+import re
 from llama_index.llms.groq import Groq
 from llama_index.core.agent import ReActAgent
 from llama_index.core import PromptTemplate
 import pyperclip  # To allow copying to clipboard
 
-# Configure Streamlit layout and page settings
+# Configuration
+THEME_CONFIG = {
+    "primaryColor": "#4f8bff",
+    "backgroundColor": "#0e1117",
+    "textColor": "#f0f2f6"
+}
+
 def configure_streamlit():
+    """Configure Streamlit page settings"""
     st.set_page_config(
         page_title="AI Data Visualizer",
         page_icon="📊",
-        layout="wide"
+        layout="wide",
+        initial_sidebar_state="expanded"
     )
-    st.markdown(
-        """
+    st.markdown(f"""
         <style>
-            .reportview-container .main .block-container { max-width: 1400px; }
-            h1 { color: #4f8bff; }
+            .reportview-container .main .block-container{{max-width: 1400px;}}
+            h1 {{color: {THEME_CONFIG['primaryColor']};}}
+            .stSelectbox, .stTextInput {{border: 1px solid {THEME_CONFIG['primaryColor']};}}
         </style>
-        """,
-        unsafe_allow_html=True,
-    )
+    """, unsafe_allow_html=True)
 
-# Validate data uploaded
 def validate_data(df):
+    """Perform data validation checks"""
     if df.empty:
-        st.error("Uploaded file is empty.")
+        st.error("Uploaded file is empty")
         return False
     return True
 
-# Generate Plotly visualization code with insights
 def generate_visualization_code(llm, df, chart_type, x_col, y_col):
-    prompt_template = PromptTemplate(
-        """
-        You are a data visualization expert. Your task is to generate Plotly Express Python code for a chart. 
-        The DataFrame to use is 'df', and the following chart characteristics should be followed:
-        - Chart type: {chart_type}.
-        - X-axis: {x_col} (Type: {x_dtype}).
-        - Y-axis: {y_col} (Type: {y_dtype}).
-        - Only provide the Python code wrapped in triple backticks. Exclude all explanations and insights in your response.
-        Example response format:
-        ```
-        python
-        import plotly.express as px
-        fig = px.{chart_type}(df, x="{x_col}", y="{y_col}")
-        fig.show()
-        ```
-        """
-    )
-
-    system_prompt = prompt_template.format(
-        chart_type=chart_type,
-        x_col=x_col,
-        x_dtype=df[x_col].dtype,
-        y_col=y_col,
-        y_dtype=df[y_col].dtype
-    )
-
+    """Generate visualization code using Groq LLM"""
+    system_prompt = f"""
+    You are an expert data visualization assistant. Generate valid Plotly Express code with these requirements:
+    1. Use DataFrame 'df' provided in context
+    2. Chart type: {chart_type}
+    3. X-axis: {x_col} ({df[x_col].dtype})
+    4. Y-axis: {y_col} ({df[y_col].dtype})
+    5. Include proper axis labels and titles
+    6. Use modern color schemes
+    7. Return ONLY the Python code wrapped in ```
+    8. After code, provide insights specific to this data relationship:
+       - Statistical correlation between columns
+       - Notable patterns/trends
+       - Data distribution characteristics
+       - Potential anomalies
+    """
+    
     try:
-        agent = ReActAgent.from_tools([], llm=llm, verbose=True)
+        agent = ReActAgent.from_tools([], llm=llm, verbose=False)
         response = agent.chat(system_prompt)
-        st.write("LLM Response:", response.response)  # Debugging output
         return response.response
     except Exception as e:
         st.error(f"API Error: {str(e)}")
         return None
 
 def execute_visualization_code(code_block, df):
+    """Safely execute visualization code"""
     try:
-        # Clean the code (remove triple backticks and extra spaces)
-        clean_code = code_block.strip().replace("```python", "").replace("```", "").strip()
-        st.write("Cleaned Code:", clean_code)  # Debugging output
-
-        # Define the execution context (with 'df' and 'px' as required)
         exec_globals = {'df': df, 'px': px}
-
-        # Execute the cleaned code
-        exec(clean_code, exec_globals)
-
-        # Return the generated figure (assuming it's assigned to 'fig')
+        exec(code_block, exec_globals)
         return exec_globals.get('fig')
-    
     except Exception as e:
         st.error(f"Execution Error: {str(e)}")
         return None
 
-# Handle user questions and generate responses based on the data
 def handle_user_question(llm, df, question, context):
-    prompt_template = PromptTemplate(
-        """
-        Context: {context}
-        Dataset Columns: {columns}
-        Sample Data:
-        {sample_data}
-        
-        Question: {question}
-        
-        Provide a detailed answer with:
-        - Specific data points
-        - Statistical analysis
-        - Visualization interpretation
-        - Potential next steps
-        """
-    )
-    qa_prompt = prompt_template.format(
-        context=context,
-        columns=list(df.columns),
-        sample_data=df.head(3).to_markdown(),
-        question=question
-    )
+    """Handle user questions with full context"""
+    qa_prompt = f"""
+    Context: {context}
+    Dataset Columns: {list(df.columns)}
+    Sample Data:
+    {df.head(3).to_markdown()}
+    
+    Question: {question}
+    
+    Provide a detailed answer with:
+    1. Specific data points from the dataset
+    2. Statistical analysis
+    3. Visualization interpretation
+    4. Potential next steps
+    """
+    
     try:
         agent = ReActAgent.from_tools([], llm=llm, verbose=False)
         response = agent.chat(qa_prompt)
@@ -117,56 +97,72 @@ def handle_user_question(llm, df, question, context):
     except Exception as e:
         return f"Error processing question: {str(e)}"
 
-# Main function that drives the Streamlit app
 def main():
     configure_streamlit()
-    st.title("📊 AI-Powered Data Visualizer")
+    st.title("📊 Smart Data Visualizer with AI Analytics")
     
+    # Sidebar controls
     with st.sidebar:
-        st.header("Upload & Configure")
+        st.header("Data Configuration")
         uploaded_file = st.file_uploader("Upload CSV", type=["csv"])
         api_key = st.text_input("Groq API Key", type="password")
-        model_name = st.selectbox("LLM Model", ["mixtral-8x7b-32768", "llama3-70b-8192"])
-    
+        model_name = st.selectbox("AI Model", ["mixtral-8x7b-32768", "llama3-70b-8192"])
+        
     if uploaded_file and api_key:
         df = pd.read_csv(uploaded_file)
         if not validate_data(df):
             return
-
+            
+        # Initialize Groq client correctly
         llm = Groq(model=model_name, api_key=api_key)
         
         with st.sidebar:
             st.header("Visualization Settings")
-            x_col = st.selectbox("X-Axis", df.columns)
-            y_col = st.selectbox("Y-Axis", df.columns)
-            chart_type = st.selectbox("Chart Type", ["bar", "line", "scatter", "histogram", "box", "violin"])
+            cols = st.columns(2)  # Creates two columns
+            x_col = cols[0].selectbox("X-Axis", df.columns)
+            y_col = cols[1].selectbox("Y-Axis", df.columns)
+                
+            chart_type = st.selectbox("Chart Type", [
+                "bar", "line", "scatter", 
+                "histogram", "box", "violin"
+            ])
+            
+            with st.expander("Advanced Options"):
+                color_scale = st.selectbox("Color Scale", px.colors.named_colorscales())
+                template = st.selectbox("Theme", ["plotly", "plotly_white", "plotly_dark"])
         
-        col1, col2 = st.columns([3, 1])
+        # Main content area
+        col1, col2 = st.columns([3,1])
         
         with col1:
             if st.button("Generate Visualization", use_container_width=True):
-                with st.spinner("Generating visualization..."):
+                with st.spinner("Analyzing data and creating visualization..."):
                     response = generate_visualization_code(llm, df, chart_type, x_col, y_col)
+                    
                     if response:
-                        # Check if code is correctly formatted
-                        if "```" in response:
-                            start = response.index("```") + len("```")
-                            end = response.rindex("```")
-                            code_block = response[start:end].strip()
+                        # Improved code extraction
+                        code_match = re.search(r"```python\n(.*?)```", response, re.DOTALL)
+                        insights_match = re.search(r"Insights:(.*?$)", response, re.DOTALL)
+                        
+                        if code_match:
+                            code = code_match.group(1)
+                            fig = execute_visualization_code(code, df)
                             
-                            # Display the code in the app
-                            st.code(code_block, language="python")
-                            
-                            # Execute the generated code
-                            fig = execute_visualization_code(code_block, df)
                             if fig:
                                 st.plotly_chart(fig, use_container_width=True)
+                                
+                                # Display insights
+                                if insights_match:
+                                    with st.expander("📈 Detailed Analysis", expanded=True):
+                                        st.markdown(insights_match.group(1).strip())
+                                else:
+                                    st.warning("No insights generated")
                             else:
-                                st.error("Failed to render visualization.")
+                                st.error("Failed to generate visualization")
                         else:
-                            st.error("Invalid code format.")
-                            st.write(response)  # Debugging output for raw response
-        
+                            st.error("No valid code generated")
+                            st.code(response)  # Debug output
+
         with col2:
             with st.expander("🔍 Data Preview"):
                 st.dataframe(df.head(10), height=300)
@@ -174,7 +170,14 @@ def main():
             with st.expander("📝 Ask Question"):
                 user_question = st.text_input("Enter your question:")
                 if user_question:
-                    context = f"Visualization Context: {chart_type}, X: {x_col}, Y: {y_col}"
+                    context = f"""
+                        Visualization Context:
+                        - Type: {chart_type}
+                        - X: {x_col} ({df[x_col].dtype})
+                        - Y: {y_col} ({df[y_col].dtype})
+                        - Sample X Values: {df[x_col].sample(3).tolist()}
+                        - Sample Y Values: {df[y_col].sample(3).tolist()}
+                    """
                     answer = handle_user_question(llm, df, user_question, context)
                     st.markdown(f"**AI Analysis:**\n{answer}")
 
