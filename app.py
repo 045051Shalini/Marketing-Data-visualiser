@@ -58,6 +58,7 @@ def generate_visualization_code(llm, df, chart_type, x_col, y_col):
     try:
         agent = ReActAgent.from_tools([], llm=llm, verbose=False)
         response = agent.chat(system_prompt)
+        st.write("LLM Response:", response.response)  # Debugging output
         return response.response
     except Exception as e:
         st.error(f"API Error: {str(e)}")
@@ -75,6 +76,7 @@ def execute_visualization_code(code_block, df):
         return exec_globals.get('fig')
     except Exception as e:
         st.error(f"Execution Error: {str(e)}")
+        st.write("Execution Error Details:", str(e))  # Debugging output
         return None
 
 def handle_user_question(llm, df, question, context):
