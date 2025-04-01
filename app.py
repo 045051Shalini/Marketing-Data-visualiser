@@ -63,15 +63,28 @@ def generate_visualization_code(llm, df, chart_type, x_col, y_col):
         st.error(f"API Error: {str(e)}")
         return None
 
-def execute_visualization_code(code_block, df):
-    """Safely execute visualization code"""
+def execute_visualization_code_and_insights(response, df):
+    """Safely execute visualization code and extract insights"""
     try:
-        exec_globals = {'df': df, 'px': px}
-        exec(code_block, exec_globals)
-        return exec_globals.get('fig')
+        # Extract code and insights
+        code_match = re.search(r"```python\n(.*?)```", response, re.DOTALL)
+        insights_match = re.search(r"Insights:(.*?$)", response, re.DOTALL)
+        
+        if code_match:
+            code = code_match.group(1)
+            exec_globals = {'df': df, 'px': px}
+            exec(code, exec_globals)
+            fig = exec_globals.get('fig')
+            
+            insights = insights_match.group(1).strip() if insights_match else "No insights generated"
+            return fig, insights
+        else:
+            st.error("No valid code generated")
+            st.code(response)  # Debug output
+            return None, None
     except Exception as e:
         st.error(f"Execution Error: {str(e)}")
-        return None
+        return None, None
 
 def handle_user_question(llm, df, question, context):
     """Handle user questions with full context"""
@@ -140,28 +153,16 @@ def main():
                     response = generate_visualization_code(llm, df, chart_type, x_col, y_col)
                     
                     if response:
-                        # Improved code extraction
-                        code_match = re.search(r"```python\n(.*?)```", response, re.DOTALL)
-                        insights_match = re.search(r"Insights:(.*?$)", response, re.DOTALL)
+                        fig, insights = execute_visualization_code_and_insights(response, df)
                         
-                        if code_match:
-                            code = code_match.group(1)
-                            fig = execute_visualization_code(code, df)
+                        if fig:
+                            st.plotly_chart(fig, use_container_width=True)
                             
-                            if fig:
-                                st.plotly_chart(fig, use_container_width=True)
-                                
-                                # Display insights
-                                if insights_match:
-                                    with st.expander("📈 Detailed Analysis", expanded=True):
-                                        st.markdown(insights_match.group(1).strip())
-                                else:
-                                    st.warning("No insights generated")
-                            else:
-                                st.error("Failed to generate visualization")
+                            # Display insights
+                            with st.expander("📈 Detailed Analysis", expanded=True):
+                                st.markdown(insights)
                         else:
-                            st.error("No valid code generated")
-                            st.code(response)  # Debug output
+                            st.error("Failed to generate visualization")
 
         with col2:
             with st.expander("🔍 Data Preview"):
