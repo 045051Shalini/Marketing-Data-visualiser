@@ -63,7 +63,12 @@ def main():
                 return
             
             # Initialize LLM
-            llm = Groq(model="llama3-70b-8192", api_key=api_key) if "Groq" in llm_choice else OpenAI(model="gpt-4", api_key=api_key)
+            try:
+                llm = Groq(model="llama3-70b-8192", api_key=api_key) if "Groq" in llm_choice else OpenAI(model="gpt-4", api_key=api_key)
+                st.sidebar.success("✅ LLM initialized successfully!")
+            except Exception as e:
+                st.error(f"Error initializing LLM: {e}")
+                return
             
             # Prompt AI for insights
             ai_prompt = f"""
@@ -75,11 +80,14 @@ def main():
                 {user_prompt}
             """
             
-            agent = ReActAgent.from_tools([], llm=llm, verbose=True)
-            response = agent.chat(ai_prompt)
-            
-            # Extract insights
-            insights_text = response.response if response.response else "No insights provided by AI."
+            try:
+                agent = ReActAgent.from_tools([], llm=llm, verbose=True)
+                response = agent.chat(ai_prompt)
+                insights_text = response.response if response.response else "No insights provided by AI."
+                st.sidebar.success("✅ Insights generated successfully!")
+            except Exception as e:
+                st.error(f"Error generating insights: {e}")
+                return
             
             st.subheader("💡 AI-Generated Insights")
             st.write(insights_text)
