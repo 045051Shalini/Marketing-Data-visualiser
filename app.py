@@ -67,7 +67,7 @@ def generate_visualization_code(llm, df, chart_type, x_col, y_col):
         st.error(f"API Error: {str(e)}")
         return None
 
-# Extract code using regular expressions and Streamlit's markdown features
+# Function to extract code and insights from the response
 def extract_code_and_insights(response):
     # Regex to extract Python code block
     match = re.search(r'```python\n(.*?)\n```', response, re.DOTALL)
