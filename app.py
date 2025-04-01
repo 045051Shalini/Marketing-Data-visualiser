@@ -5,6 +5,7 @@ from llama_index.llms.groq import Groq
 from llama_index.core.agent import ReActAgent
 from llama_index.core import PromptTemplate
 import pyperclip  # To allow copying to clipboard
+import re
 
 # Configure Streamlit layout and page settings
 def configure_streamlit():
