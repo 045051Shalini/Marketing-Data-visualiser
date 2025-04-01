@@ -11,7 +11,6 @@ public class AiDataVisualizerApplication {
         SpringApplication.run(AiDataVisualizerApplication.class, args);
     }
 }
-
 @RestController
 @RequestMapping("/api")
 class CodeExecutionController {
