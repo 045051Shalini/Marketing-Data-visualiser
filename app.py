@@ -61,6 +61,7 @@ def generate_visualization_code(llm, df, chart_type, x_col, y_col):
     try:
         agent = ReActAgent.from_tools([], llm=llm, verbose=True)
         response = agent.chat(system_prompt)
+        st.write("LLM Response:", response.response)  # Debugging output
         return response.response
     except Exception as e:
         st.error(f"API Error: {str(e)}")
@@ -70,6 +71,7 @@ def execute_visualization_code(code_block, df):
     try:
         # Clean the code (remove triple backticks and extra spaces)
         clean_code = code_block.strip().replace("```python", "").replace("```", "").strip()
+        st.write("Cleaned Code:", clean_code)  # Debugging output
 
         # Define the execution context (with 'df' and 'px' as required)
         exec_globals = {'df': df, 'px': px}
