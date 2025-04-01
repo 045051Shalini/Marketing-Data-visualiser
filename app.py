@@ -7,8 +7,6 @@ from llama_index.core import PromptTemplate
 from llama_index.core.agent import ReActAgent
 from llama_index.llms.groq import Groq
 from llama_index.llms.openai import OpenAI
-from llama_index.tools import QueryEngineTool
-from llama_index.query_engine import PandasQueryEngine
 
 def detect_column_types(df):
     """Dynamically detect column types."""
@@ -40,33 +38,25 @@ def generate_chart(df, x_axis, y_axis, chart_type):
     except Exception as e:
         return str(e)
 
-def generate_insights(df, x_axis, y_axis, user_prompt, llm):
-    """Generate insights using ReActAgent with tools."""
-    try:
-        # Create a Pandas Query Engine tool
-        query_engine = PandasQueryEngine(df)
-        tools = [QueryEngineTool.from_defaults(query_engine)]
-
-        # Initialize AI Agent with tools
-        agent = ReActAgent.from_tools(tools, llm=llm, verbose=True)
-
-        ai_prompt = f"""
-        Analyze the dataset and the generated chart type with '{x_axis}' on the x-axis and '{y_axis}' on the y-axis.
-        Provide key trends, statistical analysis, and actionable insights.
+def generate_insights(df, x_axis, y_axis, user_prompt, llm, chart_type):
+    """Generate insights using ReActAgent with error handling."""
+    agent = ReActAgent.from_tools([], llm=llm, verbose=True, max_iterations=15)
+    ai_prompt = f"""
+        Analyze the dataset and the generated {chart_type} chart with '{x_axis}' on the x-axis and '{y_axis}' on the y-axis.
+        Provide key trends and actionable insights.
         {user_prompt}
-        """
-        
+    """
+    try:
         response = agent.chat(ai_prompt)
         insights_text = response.response if response.response else "No insights provided by AI."
-        return insights_text
     except Exception as e:
-        return f"Error generating insights: {e}"
+        insights_text = f"Error generating insights: {str(e)}"
+    return insights_text
 
 def main():
     st.set_page_config(layout="wide")
     st.title("📊 Marketing Data Visualizer with AI Insights")
     
-    # Sidebar for input selections
     st.sidebar.header("1️⃣ Upload & Configure")
     uploaded_file = st.sidebar.file_uploader("Upload your dataset (CSV file)", type=["csv"])
     
@@ -92,16 +82,13 @@ def main():
             else:
                 st.plotly_chart(fig)
             
-            # Initialize LLM
             llm = Groq(model="llama3-70b-8192", api_key=api_key) if "Groq" in llm_choice else OpenAI(model="gpt-4", api_key=api_key)
             
-            # Generate insights
-            insights_text = generate_insights(df, x_axis, y_axis, user_prompt, llm)
+            insights_text = generate_insights(df, x_axis, y_axis, user_prompt, llm, chart_type)
             
             st.subheader("💡 AI-Generated Insights")
             st.write(insights_text)
             
-            # Show Python Code Button
             if st.button("📜 Show Python Code"):
                 python_code = f"""
                 import plotly.express as px
