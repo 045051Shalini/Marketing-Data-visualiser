@@ -1,7 +1,7 @@
 import streamlit as st
 import pandas as pd
 import plotly.express as px
-from llama_index import SimpleVectorIndex, SimpleDirectoryReader
+from llama_index import GPTSimpleVectorIndex
 from llama_index.llms.groq import Groq
 
 # Initialize LlamaIndex
