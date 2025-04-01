@@ -39,6 +39,7 @@ def generate_visualization_code(llm, df, chart_type, x_col, y_col):
         - Ensure correct data handling for categorical and numerical data.
         - Use modern color schemes and proper labels.
         - Return only the Python code wrapped in triple backticks.
+        - Provide a short explanation of insights after the code.
         """
     )
     
@@ -57,6 +58,13 @@ def generate_visualization_code(llm, df, chart_type, x_col, y_col):
     except Exception as e:
         st.error(f"API Error: {str(e)}")
         return None
+
+def extract_code_and_insights(response):
+    code_match = re.search(r"```python\n(.*?)```", response, re.DOTALL)
+    insights_match = re.search(r"Insights:(.*?$)", response, re.DOTALL)
+    code = code_match.group(1).strip() if code_match else None
+    insights = insights_match.group(1).strip() if insights_match else "No insights provided."
+    return code, insights
 
 def execute_visualization_code(code_block, df):
     try:
@@ -127,12 +135,13 @@ def main():
                 with st.spinner("Generating visualization..."):
                     response = generate_visualization_code(llm, df, chart_type, x_col, y_col)
                     if response:
-                        code_match = re.search(r"```python\\n(.*?)```", response, re.DOTALL)
-                        if code_match:
-                            code = code_match.group(1).strip()
+                        code, insights = extract_code_and_insights(response)
+                        if code:
                             fig = execute_visualization_code(code, df)
                             if fig:
                                 st.plotly_chart(fig, use_container_width=True)
+                                with st.expander("📈 Detailed Analysis", expanded=True):
+                                    st.markdown(insights)
                             else:
                                 st.error("Failed to render visualization.")
                         else:
