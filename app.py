@@ -12,6 +12,15 @@ def configure_streamlit():
         page_icon="📊",
         layout="wide"
     )
+    st.markdown(
+        """
+        <style>
+            .reportview-container .main .block-container { max-width: 1400px; }
+            h1 { color: #4f8bff; }
+        </style>
+        """,
+        unsafe_allow_html=True,
+    )
 
 def validate_data(df):
     if df.empty:
@@ -56,8 +65,37 @@ def execute_visualization_code(code_block, df):
         return exec_globals.get('fig')
     except Exception as e:
         st.error(f"Execution Error: {str(e)}")
-        st.code(str(e), language='bash')
         return None
+
+def handle_user_question(llm, df, question, context):
+    prompt_template = PromptTemplate(
+        """
+        Context: {context}
+        Dataset Columns: {columns}
+        Sample Data:
+        {sample_data}
+        
+        Question: {question}
+        
+        Provide a detailed answer with:
+        - Specific data points
+        - Statistical analysis
+        - Visualization interpretation
+        - Potential next steps
+        """
+    )
+    qa_prompt = prompt_template.format(
+        context=context,
+        columns=list(df.columns),
+        sample_data=df.head(3).to_markdown(),
+        question=question
+    )
+    try:
+        agent = ReActAgent.from_tools([], llm=llm, verbose=False)
+        response = agent.chat(qa_prompt)
+        return response.response
+    except Exception as e:
+        return f"Error processing question: {str(e)}"
 
 def main():
     configure_streamlit()
@@ -82,21 +120,35 @@ def main():
             y_col = st.selectbox("Y-Axis", df.columns)
             chart_type = st.selectbox("Chart Type", ["bar", "line", "scatter", "histogram", "box", "violin"])
         
-        if st.button("Generate Visualization"):
-            with st.spinner("Generating visualization..."):
-                response = generate_visualization_code(llm, df, chart_type, x_col, y_col)
-                if response:
-                    code_match = re.search(r"```python\n(.*?)```", response, re.DOTALL)
-                    if code_match:
-                        code = code_match.group(1)
-                        fig = execute_visualization_code(code, df)
-                        if fig:
-                            st.plotly_chart(fig, use_container_width=True)
+        col1, col2 = st.columns([3, 1])
+        
+        with col1:
+            if st.button("Generate Visualization", use_container_width=True):
+                with st.spinner("Generating visualization..."):
+                    response = generate_visualization_code(llm, df, chart_type, x_col, y_col)
+                    if response:
+                        code_match = re.search(r"```python\\n(.*?)```", response, re.DOTALL)
+                        if code_match:
+                            code = code_match.group(1).strip()
+                            fig = execute_visualization_code(code, df)
+                            if fig:
+                                st.plotly_chart(fig, use_container_width=True)
+                            else:
+                                st.error("Failed to render visualization.")
                         else:
-                            st.error("Failed to render visualization.")
-                    else:
-                        st.error("No valid code extracted.")
-                        st.code(response)  # Debugging output
+                            st.error("No valid code extracted.")
+                            st.code(response)  # Debugging output
+        
+        with col2:
+            with st.expander("🔍 Data Preview"):
+                st.dataframe(df.head(10), height=300)
+                
+            with st.expander("📝 Ask Question"):
+                user_question = st.text_input("Enter your question:")
+                if user_question:
+                    context = f"Visualization Context: {chart_type}, X: {x_col}, Y: {y_col}"
+                    answer = handle_user_question(llm, df, user_question, context)
+                    st.markdown(f"**AI Analysis:**\n{answer}")
 
 if __name__ == "__main__":
     main()
