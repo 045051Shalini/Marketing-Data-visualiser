@@ -7,7 +7,6 @@ from llama_index.core import PromptTemplate
 from llama_index.core.agent import ReActAgent
 from llama_index.llms.groq import Groq
 from llama_index.llms.openai import OpenAI
-
 def detect_column_types(df):
     """Dynamically detect column types."""
     column_types = {}
