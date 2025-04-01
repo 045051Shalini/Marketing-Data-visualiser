@@ -138,11 +138,13 @@ def main():
                 with st.spinner("Generating visualization..."):
                     response = generate_visualization_code(llm, df, chart_type, x_col, y_col)
                     if response:
-                        # Directly execute the generated code without extracting it
+                        # Check if code is correctly formatted
                         if "```python" in response:
                             start = response.index("```python") + len("```python")
                             end = response.index("```", start)
                             code_block = response[start:end].strip()
+                            
+                            # Display the code in the app
                             st.code(code_block, language="python")
                             
                             # Execute the generated code
