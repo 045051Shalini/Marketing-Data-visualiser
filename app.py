@@ -2,7 +2,6 @@ import streamlit as st
 import pandas as pd
 import plotly.express as px
 from llama_index.llms.groq import Groq
-from llama_index import SimpleDirectoryReader
 
 # Configure Streamlit app
 st.set_page_config(layout="wide")
