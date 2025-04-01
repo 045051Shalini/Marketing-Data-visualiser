@@ -31,15 +31,19 @@ def validate_data(df):
 def generate_visualization_code(llm, df, chart_type, x_col, y_col):
     prompt_template = PromptTemplate(
         """
-        You are a data visualization expert. Generate Plotly Express Python code following these conditions:
-        - Use the DataFrame 'df'.
+        You are an expert data visualization assistant. You will generate Plotly Express code based on the following:
+        - Use the provided DataFrame 'df'.
         - Chart type: {chart_type}.
         - X-axis: {x_col} (Type: {x_dtype}).
         - Y-axis: {y_col} (Type: {y_dtype}).
-        - Ensure correct data handling for categorical and numerical data.
-        - Use modern color schemes and proper labels.
-        - Return only the Python code wrapped in triple backticks.
-        - Provide a short explanation of insights after the code.
+        - Ensure correct handling for both categorical and numerical data.
+        - Add labels, title, and use modern color schemes for visualization.
+        - Return ONLY the Python code wrapped in triple backticks (```).
+        - After the code, include the following insights:
+          - Statistical correlation between the X and Y axes.
+          - Insights or notable patterns/trends.
+          - Anomalies or outliers.
+          - Data distribution characteristics.
         """
     )
     
@@ -52,7 +56,7 @@ def generate_visualization_code(llm, df, chart_type, x_col, y_col):
     )
     
     try:
-        agent = ReActAgent.from_tools([], llm=llm, verbose=False)
+        agent = ReActAgent.from_tools([], llm=llm, verbose=True)
         response = agent.chat(system_prompt)
         return response.response
     except Exception as e:
@@ -62,8 +66,17 @@ def generate_visualization_code(llm, df, chart_type, x_col, y_col):
 def extract_code_and_insights(response):
     code_match = re.search(r"```python\n(.*?)```", response, re.DOTALL)
     insights_match = re.search(r"Insights:(.*?$)", response, re.DOTALL)
-    code = code_match.group(1).strip() if code_match else None
-    insights = insights_match.group(1).strip() if insights_match else "No insights provided."
+    
+    if code_match:
+        code = code_match.group(1).strip()
+    else:
+        code = None
+        
+    if insights_match:
+        insights = insights_match.group(1).strip()
+    else:
+        insights = "No insights provided."
+    
     return code, insights
 
 def execute_visualization_code(code_block, df):
@@ -92,15 +105,16 @@ def handle_user_question(llm, df, question, context):
         - Potential next steps
         """
     )
-    # Change to using to_string() instead of to_markdown()
+    
     qa_prompt = prompt_template.format(
         context=context,
         columns=list(df.columns),
         sample_data=df.head(3).to_string(),
         question=question
     )
+    
     try:
-        agent = ReActAgent.from_tools([], llm=llm, verbose=False)
+        agent = ReActAgent.from_tools([], llm=llm, verbose=True)
         response = agent.chat(qa_prompt)
         return response.response
     except Exception as e:
@@ -135,8 +149,10 @@ def main():
             if st.button("Generate Visualization", use_container_width=True):
                 with st.spinner("Generating visualization..."):
                     response = generate_visualization_code(llm, df, chart_type, x_col, y_col)
+                    
                     if response:
                         code, insights = extract_code_and_insights(response)
+                        
                         if code:
                             fig = execute_visualization_code(code, df)
                             if fig:
