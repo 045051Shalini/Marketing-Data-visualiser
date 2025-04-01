@@ -71,6 +71,11 @@ def execute_visualization_code(code_block, df):
         # Clean the code (remove markdown or extra backticks)
         clean_code = code_block.strip().replace("```python", "").replace("```", "").strip()
 
+        # Check if the cleaned code is valid
+        if not clean_code:
+            st.error("No valid code extracted.")
+            return None
+
         # Define the execution context (with 'df' and 'px' as required)
         exec_globals = {'df': df, 'px': px}
 
@@ -83,7 +88,6 @@ def execute_visualization_code(code_block, df):
     except Exception as e:
         st.error(f"Execution Error: {str(e)}")
         return None
-
 # Handle user questions and generate responses based on the data
 def handle_user_question(llm, df, question, context):
     prompt_template = PromptTemplate(
