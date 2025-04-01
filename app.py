@@ -1,61 +1,82 @@
 import streamlit as st
-import openai
+import pandas as pd
+import plotly.express as px
+from llama_index import VectorStoreIndex, ServiceContext, Document
+from llama_index.llms.groq import Groq
+from llama_index import SimpleDirectoryReader
 
-from llama_index.core import VectorStoreIndex, SimpleDirectoryReader, Settings
+# Configure Streamlit app
+st.set_page_config(layout="wide")
+st.title("📊 Marketing Data Insights with AI 🧠")
 
-st.set_page_config(page_title="Chat with the Streamlit docs, powered by LlamaIndex", page_icon="🦙", layout="centered", initial_sidebar_state="auto", menu_items=None)
-openai.api_key = st.secrets.openai_key
-st.title("Chat with the Streamlit docs, powered by LlamaIndex 💬🦙")
-st.info("Check out the full tutorial to build this app in our [blog post](https://blog.streamlit.io/build-a-chatbot-with-custom-data-sources-powered-by-llamaindex/)", icon="📃")
+# Sidebar for user input
+st.sidebar.header("1️⃣ Upload & Configure")
+uploaded_file = st.sidebar.file_uploader("Upload your dataset (CSV file)", type=["csv"])
+api_key = st.sidebar.text_input("Enter Groq API Key", type="password")
 
-if "messages" not in st.session_state.keys():  # Initialize the chat messages history
-    st.session_state.messages = [
-        {
-            "role": "assistant",
-            "content": "Ask me a question about Streamlit's open-source Python library!",
-        }
-    ]
+# Store chatbot message history
+if "messages" not in st.session_state:
+    st.session_state.messages = [{"role": "assistant", "content": "Ask me anything about the data!"}]
 
+# Function to load data and create index
 @st.cache_resource(show_spinner=False)
 def load_data():
-    reader = SimpleDirectoryReader(input_dir="./data", recursive=True)
-    docs = reader.load_data()
-    Settings.llm = OpenAI(
-        model="gpt-3.5-turbo",
-        temperature=0.2,
-        system_prompt="""You are an expert on 
-        the Streamlit Python library and your 
-        job is to answer technical questions. 
-        Assume that all questions are related 
-        to the Streamlit Python library. Keep 
-        your answers technical and based on 
-        facts – do not hallucinate features.""",
-    )
-    index = VectorStoreIndex.from_documents(docs)
-    return index
+    # Load the CSV data
+    df = pd.read_csv(uploaded_file)
+    # Display first few rows of the dataset for preview
+    st.write("### Preview of the Dataset", df.head())
+    
+    # Convert CSV data to documents for LlamaIndex
+    docs = [Document(text=row.to_json()) for index, row in df.iterrows()]
+    
+    # Create a vector store index using the uploaded data
+    service_context = ServiceContext.from_defaults(llm=Groq(model="llama3-70b-8192", api_key=api_key))
+    index = VectorStoreIndex.from_documents(docs, service_context=service_context)
+    return index, df
 
+if uploaded_file and api_key:
+    # Load and index the data when CSV and API key are provided
+    index, df = load_data()
 
-index = load_data()
+    # Create the chat engine (ReAct Agent)
+    chat_engine = index.as_chat_engine(chat_mode="condense_question", verbose=True)
 
-if "chat_engine" not in st.session_state.keys():  # Initialize the chat engine
-    st.session_state.chat_engine = index.as_chat_engine(
-        chat_mode="condense_question", verbose=True, streaming=True
-    )
+    # Sidebar UI for selecting chart options
+    x_axis = st.sidebar.selectbox("Select X-axis", df.columns)
+    y_axis = st.sidebar.selectbox("Select Y-axis", df.columns)
+    chart_type = st.sidebar.selectbox("Select Chart Type", ["bar", "line", "scatter", "histogram"])
 
-if prompt := st.chat_input(
-    "Ask a question"
-):  # Prompt for user input and save to chat history
-    st.session_state.messages.append({"role": "user", "content": prompt})
+    # Custom prompt for AI (optional)
+    user_prompt = st.text_area("💬 Custom AI Prompt", "Analyze the trends in this data.")
 
-for message in st.session_state.messages:  # Write message history to UI
-    with st.chat_message(message["role"]):
-        st.write(message["content"])
+    if st.button("🚀 Generate Visualization & Insights"):
+        # Generate selected chart type using Plotly
+        fig = px.__getattribute__(chart_type)(df, x=x_axis, y=y_axis, title=f"{chart_type.capitalize()} Chart")
+        st.plotly_chart(fig)
 
-# If last message is not from assistant, generate a new response
-if st.session_state.messages[-1]["role"] != "assistant":
-    with st.chat_message("assistant"):
-        response_stream = st.session_state.chat_engine.stream_chat(prompt)
-        st.write_stream(response_stream.response_gen)
-        message = {"role": "assistant", "content": response_stream.response}
-        # Add response to message history
-        st.session_state.messages.append(message)
+        # Data description for the agent
+        data_description = f"""
+        The dataset contains the following columns: {', '.join(df.columns)}.
+        The chart visualizes the relationship between {x_axis} (x-axis) and {y_axis} (y-axis).
+        Here is the data used for the chart:
+        {df[[x_axis, y_axis]].to_dict(orient='records')}
+        """
+        
+        # Construct AI prompt
+        ai_prompt = f"""
+        Please analyze the data provided and the chart context. The chart shows the relationship between {x_axis} (x-axis) and {y_axis} (y-axis).
+        Below is the data used for the chart:
+        {data_description}
+        {user_prompt}
+        """
+        
+        # Generate insights using the chat engine
+        response = chat_engine.chat(ai_prompt)
+        insights_text = response.response if response.response else "No insights provided by AI."
+
+        # Display the AI-generated insights
+        st.subheader("💡 AI-Generated Insights")
+        st.write(insights_text)
+
+else:
+    st.info("Upload a dataset and enter your API key to proceed.")
