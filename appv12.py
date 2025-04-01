@@ -4,7 +4,7 @@ import numpy as np
 import json
 import plotly.express as px
 import re
-import traceback
+
 from llama_index.llms.groq import Groq
 from llama_index.core.agent import ReActAgent
 from llama_index.core import PromptTemplate
