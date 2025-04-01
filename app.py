@@ -3,6 +3,12 @@ import pandas as pd
 import plotly.express as px
 from llama_index.llms.groq import Groq
 from llama_index.core.agent import ReActAgent
+from llama_index.prompts import PromptTemplate
+from llama_index.tools import QueryEngineTool, ToolMetadata
+import json
+import re
+import datetime
+import numpy as np
 
 # Streamlit page configuration
 st.set_page_config(layout="wide")
@@ -17,19 +23,105 @@ if uploaded_file and api_key:
     # Load CSV into DataFrame
     df = pd.read_csv(uploaded_file)
     
+    # Convert date column to datetime format
+    df['Purchase_Date'] = pd.to_datetime(df['Purchase_Date'], dayfirst=True, errors='coerce')
+    # Convert numerical columns to appropriate types
+    df['Price (Rs.)'] = df['Price (Rs.)'].astype(float)
+    df['Discount (%)'] = df['Discount (%)'].astype(float)
+    df['Final_Price(Rs.)'] = df['Final_Price(Rs.)'].astype(float)
+    # Handling missing values
+    df = df.fillna(0)
+    
+    # Function to extract metadata
+    def return_vals(df, c):
+        if isinstance(df[c].iloc[0], (int, float, complex)):
+            return [max(df[c]), min(df[c]), np.mean(df[c])]
+        elif isinstance(df[c].iloc[0], datetime.datetime):
+            return [str(max(df[c])), str(min(df[c])), str(np.mean(df[c]))]
+        else:
+            return list(df[c].value_counts()[:10])
+    
+    # Store dataset metadata
+    dict_ = {}
+    for c in df.columns:
+        dict_[c] = {'column_name': c, 'type': str(type(df[c].iloc[0])), 'variable_information': return_vals(df, c)}
+    
+    # Save metadata as JSON
+    with open("dataframe.json", "w") as fp:
+        json.dump(dict_, fp)
+    
+    # Load metadata
+    reader = JSONReader()
+    documents = reader.load_data(input_file='dataframe.json')
+    dataframe_index = VectorStoreIndex.from_documents(documents)
+    
+    # Define styling instructions
+    styling_instructions = [
+        Document(text="""
+            For a line chart, use plotly_white template, set x & y axes line to 0.2, grid width to 1.
+            Always include a bold title, use multiple colors for multiple lines.
+            Annotate min & max values, show numbers in 'K' or 'M' if >1000/100000.
+            Show percentages in 2 decimal points with '%'.
+        """),
+        Document(text="""
+            For a bar chart, use plotly_white template, set x & y axes line to 0.2, grid width to 1.
+            Include a bold title, use multiple colors, annotate values on y-axis.
+            Display numbers in 'K' or 'M' if >1000/100000, percentages in 2 decimal points with '%'.
+        """),
+        Document(text="""
+            General instructions: Use plotly_white template, set x & y axes line to 0.2, grid width to 1.
+            Include a bold title, display numbers in 'K' or 'M' if >1000/100000.
+            Show percentages in 2 decimal points with '%'.
+        """),
+    ]
+    
+    # Create style index
+    style_index = VectorStoreIndex.from_documents(styling_instructions)
+    
+    # Build query engines
+    dataframe_engine = dataframe_index.as_query_engine(similarity_top_k=1)
+    styling_engine = style_index.as_query_engine(similarity_top_k=1)
+    
+    # Define tools
+    query_engine_tools = [
+        QueryEngineTool(
+            query_engine=dataframe_engine,
+            metadata=ToolMetadata(
+                name="dataframe_index",
+                description="Provides information about the dataset columns and data distribution."
+            ),
+        ),
+        QueryEngineTool(
+            query_engine=styling_engine,
+            metadata=ToolMetadata(
+                name="styling",
+                description="Provides Plotly styling instructions for data visualization."
+            ),
+        ),
+    ]
+    
+    # Initialize Groq LLM
+    llm = Groq(model="llama3-70b-8192", api_key=api_key)
+    
+    # Create agent
+    agent = ReActAgent.from_tools(query_engine_tools, llm=llm, verbose=True)
+    
+    # Adjust agent prompt
+    new_prompt_txt = """
+    You are designed to help with marketing data visualization in Plotly using Python.
+    You have access to tools providing dataset insights and styling instructions.
+    Please follow a structured approach, use JSON format for tool actions, and ensure correctness.
+    """
+    new_prompt = PromptTemplate(new_prompt_txt)
+    agent.update_prompts({'agent_worker:system_prompt': new_prompt})
+    
     # Show first few rows of the data
     st.write("### Preview of the dataset", df.head())
     
     # User prompt for AI-generated code
-    user_prompt = st.text_area("💬 Custom AI Prompt (Optional)", "Generate a pie chart based on categories in the data.")
-
+    user_prompt = st.text_area("💬 Custom AI Prompt (Optional)", "Generate a bar chart based on categories in the data.")
+    
     if st.button("🚀 Generate Visualization & Insights"):
-        # Initialize the Groq model (use the provided API key)
-        llm = Groq(model="llama3-70b-8192", api_key=api_key)
-        
-        # Initialize ReActAgent with the Groq LLM
-        agent = ReActAgent.from_tools([], llm=llm, verbose=True)
-        
         # Generate AI prompt based on user input
         ai_prompt = f"""
         Based on the following dataset, generate Python code to create a chart:
@@ -37,25 +129,42 @@ if uploaded_file and api_key:
         {user_prompt}
         """
         
-        # Get the Python code from the agent
+        # Get response from agent
         response = agent.chat(ai_prompt)
-        generated_code = response.response if response.response else "No code generated by AI."
         
-        # Display the generated code (for transparency and debugging)
-        st.subheader("💬 Generated Python Code:")
-        st.code(generated_code, language="python")
-        
-        # Try to execute the generated code and display the chart using Plotly
-        try:
-            # Execute the generated code to create the chart
-            exec(generated_code)
-            # Assuming the chart is stored in a variable called `fig`
-            if 'fig' in locals():
-                st.plotly_chart(fig)  # Display the Plotly chart
-            else:
-                st.error("No chart generated. Please check the generated code.")
-        except Exception as e:
-            st.error(f"Error executing the generated code: {e}")
-
+        # Extract code from response using regex (assuming code block is wrapped in triple backticks)
+        code_match = re.search(r"```python\n(.*?)```", response.response, re.DOTALL)
+        if code_match:
+            extracted_code = code_match.group(1)
+            st.subheader("💬 Generated Python Code:")
+            st.code(extracted_code, language="python")
+            
+            # Try to execute the extracted code and display the chart using Plotly
+            try:
+                exec(extracted_code)
+                # Assuming the chart is stored in a variable called `fig`
+                if 'fig' in locals():
+                    st.plotly_chart(fig)  # Display the Plotly chart
+                else:
+                    st.error("No chart generated. Please check the generated code.")
+            except Exception as e:
+                st.error(f"Error executing the generated code: {e}")
+        else:
+            st.error("No valid Python code found in response.")
 else:
     st.info("Upload a dataset and enter your API key to proceed.")
+Key Improvements:
+Metadata Extraction: Added code to extract and store metadata from the dataset.
+Styling Instructions: Included detailed styling instructions for different types of charts.
+Query Engines: Built query engines for dataset insights and styling instructions.
+Enhanced Error Handling: Improved error handling for executing the generated code.
+Try running this updated code in your Streamlit app. If you encounter any issues or need further customization, let me know!
+
+
+Edit in Pages
+
+
+
+
+
+AI-generated content may be incorrect
