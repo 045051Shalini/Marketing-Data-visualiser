@@ -2,7 +2,7 @@ import streamlit as st
 import pandas as pd
 from llama_index.llms.groq import Groq
 from llama_index.core.agent import ReActAgent
-
+import matplotlib.pyplot as plt
 
 # Streamlit page configuration
 st.set_page_config(layout="wide")
@@ -20,8 +20,7 @@ if uploaded_file and api_key:
     # Show first few rows of the data
     st.write("### Preview of the dataset", df.head())
     
-    # Column selection for visualization
-    chart_type = st.sidebar.selectbox("Select Chart Type", ["bar", "line", "scatter", "histogram", "pie"])
+    # User prompt for AI-generated code
     user_prompt = st.text_area("💬 Custom AI Prompt (Optional)", "Generate a pie chart based on categories in the data.")
 
     if st.button("🚀 Generate Visualization & Insights"):
@@ -33,7 +32,7 @@ if uploaded_file and api_key:
         
         # Generate AI prompt based on user input
         ai_prompt = f"""
-        Based on the following dataset, generate Python code to create a {chart_type} chart:
+        Based on the following dataset, generate Python code to create a chart:
         {df.head().to_string()}
         {user_prompt}
         """
