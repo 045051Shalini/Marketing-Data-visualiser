@@ -68,13 +68,6 @@ def generate_visualization_code(llm, df, chart_type, x_col, y_col):
 
 def execute_visualization_code(code_block, df):
     try:
-        # Clean the code (remove markdown or extra backticks)
-        clean_code = code_block.strip().replace("```python", "").replace("```", "").strip()
-
-        # Check if the cleaned code is valid
-        if not clean_code:
-            st.error("No valid code extracted.")
-            return None
 
         # Define the execution context (with 'df' and 'px' as required)
         exec_globals = {'df': df, 'px': px}
