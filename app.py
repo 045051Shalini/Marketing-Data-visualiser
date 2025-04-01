@@ -4,10 +4,10 @@ import plotly.express as px
 import requests
 import re
 
-#ME_CONFIG = {
-"primaryColor": "#4f8bff",
-"backgroundColor": "#0e1117",
-"textColor": "#f0f2f6"
+ME_CONFIG = {
+    "primaryColor": "#4f8bff",
+    "backgroundColor": "#0e1117",
+    "textColor": "#f0f2f6"
 }
 
 def configure_streamlit():
