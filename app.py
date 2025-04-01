@@ -3,10 +3,13 @@ import pandas as pd
 import plotly.express as px
 import requests
 import re
+
+# Theme Configuration
 ME_CONFIG = {
     "primaryColor": "#4f8bff",
     "backgroundColor": "#0e1117",
-    "textColor": "#f0f2f6"}
+    "textColor": "#f0f2f6"
+}
 
 def configure_streamlit():
     """Configure Streamlit page settings"""
@@ -19,8 +22,8 @@ def configure_streamlit():
     st.markdown(f"""
         <style>
             .reportview-container .main .block-container{{max-width: 1400px;}}
-            h1 {{color: {THEME_CONFIG['primaryColor']};}}
-            .stSelectbox, .stTextInput {{border: 1px solid {THEME_CONFIG['primaryColor']};}}
+            h1 {{color: {ME_CONFIG['primaryColor']};}}
+            .stSelectbox, .stTextInput {{border: 1px solid {ME_CONFIG['primaryColor']};}}
         </style>
     """, unsafe_allow_html=True)
 
@@ -52,7 +55,6 @@ def generate_visualization_code(llm, df, chart_type, x_col, y_col):
     try:
         agent = ReActAgent.from_tools([], llm=llm, verbose=False)
         response = agent.chat(system_prompt)
-        st.write("LLM Response:", response.response)  # Debugging output
         return response.response
     except Exception as e:
         st.error(f"API Error: {str(e)}")
@@ -66,7 +68,10 @@ def execute_visualization_code(code_block):
     """Send the code to the Java backend for execution"""
     try:
         response = requests.post("http://localhost:8080/api/execute", json={"code": code_block})
-        return response.text
+        if response.status_code == 200:
+            return response.json() if response.headers.get("content-type") == "application/json" else response.text
+        else:
+            return f"Execution Error: {response.text}"
     except Exception as e:
         st.error(f"Execution Error: {str(e)}")
         return None
@@ -140,44 +145,7 @@ def main():
                     if response:
                         # Extract code and insights
                         code_match = re.search(r"```python\n(.*?)```", response, re.DOTALL)
-                        insights_match = re.search(r"Insights:(.*?$)", response, re.DOTALL)
+                        insights_match = re.search(r"Insights:\s*(.*)", response, re.DOTALL)
                         
                         if code_match:
-                            code = clean_code(code_match.group(1))
-                            st.subheader("Generated Python Code")
-                            st.code(code, language="python")
-                            
-                            execution_result = execute_visualization_code(code)
-                            st.text(execution_result)
-                            
-                            # Display insights
-                            if insights_match:
-                                insights = insights_match.group(1).strip()
-                                st.subheader("Insights")
-                                st.markdown(insights)
-                            else:
-                                st.warning("No insights generated")
-                        else:
-                            st.error("No valid code generated")
-                            st.code(response)  # Debug output
-
-        with col2:
-            with st.expander("🔍 Data Preview"):
-                st.dataframe(df.head(10), height=300)
-                
-            with st.expander("📝 Ask Question"):
-                user_question = st.text_input("Enter your question:")
-                if user_question:
-                    context = f"""
-                        Visualization Context:
-                        - Type: {chart_type}
-                        - X: {x_col} ({df[x_col].dtype})
-                        - Y: {y_col} ({df[y_col].dtype})
-                        - Sample X Values: {df[x_col].sample(3).tolist()}
-                        - Sample Y Values: {df[y_col].sample(3).tolist()}
-                    """
-                    answer = handle_user_question(llm, df, user_question, context)
-                    st.markdown(f"**AI Analysis:**\n{answer}")
-
-if __name__ == "__main__":
-    main()
+                            code = clean_code(code_match
