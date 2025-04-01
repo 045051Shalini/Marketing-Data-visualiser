@@ -1,8 +1,8 @@
 import streamlit as st
 import pandas as pd
 import plotly.express as px
-from llama_index.core.agent import ReActAgent
 from llama_index.llms.groq import Groq
+from llama_index.core.agent import ReActAgent
 
 # Streamlit page configuration
 st.set_page_config(layout="wide")
