@@ -1,7 +1,6 @@
 import streamlit as st
 import pandas as pd
 import plotly.express as px
-from llama_index import LlamaIndex
 from llama_index.llms.openai import OpenAI
 from llama_index.indices.service_context import ServiceContextSimple
 
