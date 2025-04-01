@@ -76,4 +76,14 @@ def main():
             # Show Python Code Button
             if st.button("📜 Show Python Code"):
                 python_code = f"""
-                import plotly
+                import plotly.express as px
+                fig = px.{chart_type}(df, x='{x_axis}', y='{y_axis}', title='{chart_type.capitalize()} Visualization')
+                fig.update_layout(xaxis_title='{x_axis}', yaxis_title='{y_axis}')
+                fig.show()
+                """
+                st.code(python_code, language='python')
+    else:
+        st.info("Upload a dataset and enter your Groq API key to proceed.")
+
+if __name__ == "__main__":
+    main()
