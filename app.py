@@ -2,7 +2,7 @@ import streamlit as st
 import pandas as pd
 from llama_index.llms.groq import Groq
 from llama_index.core.agent import ReActAgent
-import matplotlib.pyplot as plt
+
 
 # Streamlit page configuration
 st.set_page_config(layout="wide")
