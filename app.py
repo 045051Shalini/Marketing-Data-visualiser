@@ -25,7 +25,6 @@ def load_data(uploaded_file):
                     df[col] = pd.to_numeric(df[col])
                 except ValueError:
                     pass
-                
             return df.dropna(how='all').fillna(0)
         except Exception as e:
             st.error(f"Error loading file: {str(e)}")
@@ -57,7 +56,7 @@ class GeneratePythonCodeTool(BaseTool):
     def __init__(self):
         pass
 
-    def _run(self, query: str) -> str:
+    def __call__(self, query: str) -> str:
         """Use the Groq LLM to generate Python code based on the query."""
 
         llm = setup_llm()
@@ -73,9 +72,6 @@ class GeneratePythonCodeTool(BaseTool):
         else:
             return "Code generation failed."
 
-    async def _arun(self, query: str) -> str:
-        raise NotImplementedError("async not implemented")
-
 # Tool for Generating Insights
 class GenerateInsightsTool(BaseTool):
     """Tool for generating insights from the data."""
@@ -88,7 +84,7 @@ class GenerateInsightsTool(BaseTool):
     def __init__(self):
         pass
 
-    def _run(self, query: str) -> str:
+    def __call__(self, query: str) -> str:
         """Use the Groq LLM to generate insights based on the query."""
 
         llm = setup_llm()
@@ -99,9 +95,6 @@ class GenerateInsightsTool(BaseTool):
 
         response = llm.complete(prompt)
         return response.text
-
-    async def _arun(self, query: str) -> str:
-        raise NotImplementedError("async not implemented")
 
 # Streamlit UI
 st.title("Groq Data Visualizer")
