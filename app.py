@@ -11,8 +11,8 @@ from llama_index.embeddings.ollama import OllamaEmbedding
 import re
 import numpy as np
 
-# Custom JSON Encoder to handle NumPy types
-class NumpyEncoder(json.JSONEncoder):
+# Custom JSON Encoder to handle NumPy types and other non-serializable objects
+class EnhancedJSONEncoder(json.JSONEncoder):
     def default(self, obj):
         if isinstance(obj, np.integer):
             return int(obj)
@@ -21,8 +21,13 @@ class NumpyEncoder(json.JSONEncoder):
         elif isinstance(obj, np.ndarray):
             return obj.tolist()
         elif isinstance(obj, pd.Timestamp):
-            return str(obj)  # Convert pandas Timestamp to string
-        return super(NumpyEncoder, self).default(obj)
+            return str(obj)
+        elif isinstance(obj, (pd.Series, pd.DataFrame)):
+            return obj.to_dict()  # Convert pandas Series/DataFrames to dict
+        try:
+            return super().default(obj)
+        except TypeError:
+            return str(obj) # Convert any remaining non-serializable object to string
 
 # Streamlit App Configuration
 st.set_page_config(page_title="LLM-Powered Data Visualizer", layout="wide")
@@ -118,14 +123,14 @@ except Exception as e:
 def setup_tools(df):
     def generate_metadata():
         def return_vals(col):
-            if pd.api.types.is_numeric_dtype(df[col]):
-                return [float(df[col].max()), float(df[col].min()), float(df[col].mean())]
-            elif pd.api.types.is_datetime64_any_dtype(df[col]):
-                return [str(df[col].max()), str(df[col].min()), str(df[col].mean())]
             try:
+                if pd.api.types.is_numeric_dtype(df[col]):
+                    return [float(df[col].max()), float(df[col].min()), float(df[col].mean())]
+                elif pd.api.types.is_datetime64_any_dtype(df[col]):
+                    return [str(df[col].max()), str(df[col].min()), str(df[col].mean())]
                 return df[col].astype(str).value_counts().nlargest(10).to_dict()
-            except TypeError as e:
-                st.error(f"Error during value counts: {e}")
+            except Exception as e:
+                st.error(f"Error generating stats for column {col}: {e}")
                 return {}
 
         metadata = {}
@@ -141,7 +146,7 @@ def setup_tools(df):
         return metadata
 
     metadata = generate_metadata()
-    metadata_engine = VectorStoreIndex.from_documents([Document(text=json.dumps(metadata, cls=NumpyEncoder))])
+    metadata_engine = VectorStoreIndex.from_documents([Document(text=json.dumps(metadata, cls=EnhancedJSONEncoder))])
     
     insight_prompt = Document(text="""
     When analyzing charts:
@@ -178,21 +183,25 @@ def create_agent(df, llm):
         st.error("Please configure LLM settings first")
         return None
     
-    tools = setup_tools(df)
-    agent = ReActAgent.from_tools(tools, llm=llm, verbose=True)
-    
-    agent.update_prompts({
-        "agent_worker:system_prompt": PromptTemplate("""
-        You are an advanced data analysis assistant with capabilities to:
-        1. Generate professional visualizations
-        2. Provide business insights
-        3. Handle complex data requests
-        4. Explain technical concepts
+    try:
+        tools = setup_tools(df)
+        agent = ReActAgent.from_tools(tools, llm=llm, verbose=True)
         
-        Always use available tools for metadata and insights.
-        """)
-    })
-    return agent
+        agent.update_prompts({
+            "agent_worker:system_prompt": PromptTemplate("""
+            You are an advanced data analysis assistant with capabilities to:
+            1. Generate professional visualizations
+            2. Provide business insights
+            3. Handle complex data requests
+            4. Explain technical concepts
+            
+            Always use available tools for metadata and insights.
+            """)
+        })
+        return agent
+    except Exception as e:
+        st.error(f"Error creating agent: {e}")
+        return None
 
 # Streamlit UI
 st.title("Multi-LLM Data Analysis Platform")
