@@ -7,7 +7,7 @@ from llama_index.core.tools import QueryEngineTool, ToolMetadata
 from llama_index.core.agent import ReActAgent
 from llama_index.llms.groq import Groq
 from llama_index.llms.openai import OpenAI
-from llama_index.embeddings.ollama import OllamaEmbedding
+from llama_index.embeddings.openai import OpenAIEmbedding
 import re
 import numpy as np
 
@@ -57,70 +57,36 @@ def load_data(uploaded_file):
 def setup_llm():
     with st.sidebar:
         st.header("LLM Configuration")
-        
-        llm_provider = st.radio(
-            "Select LLM Provider",
-            ("Groq", "OpenAI", "Custom"),
-            index=0,
-            help="Choose your preferred LLM provider"
+        api_key = st.text_input(
+            "Groq API Key",
+            type="password",
+            help="Get your API key from https://console.groq.com/"
         )
-        
-        if llm_provider == "Groq":
-            api_key = st.text_input(
-                "Groq API Key",
-                type="password",
-                help="Get your API key from https://console.groq.com/"
-            )
-            if api_key:
-                try:
-                    return Groq(model="llama3-70b-8192", api_key=api_key)
-                except Exception as e:
-                    st.error(f"Invalid Groq API key: {str(e)}")
-                    return None
-                
-        elif llm_provider == "OpenAI":
-            api_key = st.text_input(
-                "OpenAI API Key",
-                type="password",
-                help="Get your API key from https://platform.openai.com/"
-            )
-            if api_key:
-                try:
-                    return OpenAI(model="gpt-3.5-turbo", api_key=api_key)
-                except Exception as e:
-                    st.error(f"Invalid OpenAI API key: {str(e)}")
-                    return None
-                
-        elif llm_provider == "Custom":
-            model_name = st.text_input(
-                "Custom Model Name",
-                help="Enter model name (e.g. 'llama3')"
-            )
-            api_base = st.text_input(
-                "API Base URL",
-                help="Local endpoint (e.g. 'http://localhost:11434')"
-            )
-            if model_name and api_base:
-                try:
-                    from llama_index.llms.ollama import Ollama
-                    return Ollama(model=model_name, base_url=api_base)
-                except Exception as e:
-                    st.error(f"Connection error: {str(e)}")
-                    return None
-                
+        if api_key:
+            try:
+                return Groq(model="llama3-70b-8192", api_key=api_key)
+            except Exception as e:
+                st.error(f"Invalid Groq API key: {str(e)}")
+                return None
         return None
 
 # Initialize Embeddings
-try:
-    Settings.embed_model = OllamaEmbedding(
-        model_name="nomic-embed-text",
-        base_url="http://localhost:11434"
-    )
-except Exception as e:
-    st.error(f"Error initializing embeddings: {e}")
-
+def setup_embeddings():
+    with st.sidebar:
+        api_key_embed = st.text_input(
+            "OpenAI Embeddings API Key",
+            type="password",
+            help="Get your OpenAI API key from https://platform.openai.com/"
+        )
+        if api_key_embed:
+            try:
+                return OpenAIEmbedding(api_key=api_key_embed)
+            except Exception as e:
+                st.error(f"Invalid OpenAI Embeddings API key: {str(e)}")
+                return None
+        return None
 # Initialize Tools
-def setup_tools(df):
+def setup_tools(df, embed_model):
     def generate_metadata():
         def return_vals(col):
             try:
@@ -146,7 +112,7 @@ def setup_tools(df):
         return metadata
 
     metadata = generate_metadata()
-    metadata_engine = VectorStoreIndex.from_documents([Document(text=json.dumps(metadata, cls=EnhancedJSONEncoder))])
+    metadata_engine = VectorStoreIndex.from_documents([Document(text=json.dumps(metadata, cls=EnhancedJSONEncoder))], embed_model=embed_model).as_query_engine()
     
     insight_prompt = Document(text="""
     When analyzing charts:
@@ -158,18 +124,18 @@ def setup_tools(df):
     6. Calculate percentage changes
     7. Correlate external events
     """)
-    insight_index = VectorStoreIndex.from_documents([insight_prompt])
+    insight_index = VectorStoreIndex.from_documents([insight_prompt], embed_model=embed_model).as_query_engine()
     
     return [
         QueryEngineTool(
-            query_engine=metadata_engine.as_query_engine(),
+            query_engine=metadata_engine,
             metadata=ToolMetadata(
                 name="data_metadata",
                 description="Access dataset statistics and column information"
             )
         ),
         QueryEngineTool(
-            query_engine=insight_index.as_query_engine(),
+            query_engine=insight_index,
             metadata=ToolMetadata(
                 name="chart_insights",
                 description="Provides analytical frameworks for chart interpretation"
@@ -178,13 +144,16 @@ def setup_tools(df):
     ]
 
 # Agent Configuration
-def create_agent(df, llm):
+def create_agent(df, llm, embed_model):
     if llm is None:
         st.error("Please configure LLM settings first")
         return None
+    if embed_model is None:
+        st.error("Please configure Embeddings settings first")
+        return None
     
     try:
-        tools = setup_tools(df)
+        tools = setup_tools(df, embed_model)
         agent = ReActAgent.from_tools(tools, llm=llm, verbose=True)
         
         agent.update_prompts({
@@ -216,6 +185,7 @@ with st.sidebar:
 # Main Interface
 df = load_data(uploaded_file)
 llm = setup_llm()
+embed_model = setup_embeddings()
 
 if not df.empty:
     query = st.text_area("Analysis Request:", 
@@ -223,7 +193,7 @@ if not df.empty:
                         height=100)
     
     if st.button("Execute Analysis"):
-        agent = create_agent(df, llm)
+        agent = create_agent(df, llm, embed_model)
         
         if agent:
             response = agent.chat(query)
