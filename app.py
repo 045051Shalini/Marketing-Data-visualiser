@@ -72,7 +72,7 @@ def setup_llm():
 # Initialize Embeddings
 def setup_embeddings():
     try:
-        return HuggingFaceEmbedding(model_name="sentence-transformers/all-mpnet-base-v2")
+        return HuggingFaceEmbedding(model_name="BAAI/bge-small-en-v1.5")
     except Exception as e:
         st.error(f"Error initializing embeddings: {e}")
         return None
