@@ -229,7 +229,7 @@ if not df.empty:
             response = agent.chat(query)
             
            code_match = re.search(r"``````", response.response, re.DOTALL)
-            insight_match = re.search(r"Insights:(.*?)(?=```)", response.response, re.DOTALL)
+           insight_match = re.search(r"Insights:(.*?)(?=```)", response.response, re.DOTALL)
             
             if code_match:
                 code = code_match.group(1)
