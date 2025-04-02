@@ -12,7 +12,7 @@ from langchain.indexes import VectorstoreIndexCreator
 
 load_dotenv()
 api_token = os.getenv('ASSEMBLY_AI_KEY')
-os.environ['OPENAI_API_KEY'] = os.getenv('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')
+os.environ['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'] = os.getenv('OPENAI_API_KEY')
 
 base_url = "https://api.assemblyai.com/v2"
 
