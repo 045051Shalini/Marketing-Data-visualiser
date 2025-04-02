@@ -7,7 +7,6 @@ from llama_index.core.tools import QueryEngineTool, ToolMetadata
 from llama_index.core.agent import ReActAgent
 from llama_index.llms.groq import Groq
 from llama_index.llms.openai import OpenAI
-from llama_index.embeddings.ollama import OllamaEmbedding
 import re
 
 # Streamlit App Configuration
