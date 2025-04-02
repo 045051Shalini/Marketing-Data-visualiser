@@ -5,7 +5,7 @@ import json
 from llama_index.core import VectorStoreIndex, PromptTemplate, Document
 from llama_index.core.tools import QueryEngineTool, ToolMetadata
 from llama_index.llms.groq import Groq
-from llama_index.embeddings import HuggingFaceEmbedding
+from llama_index.embeddings.huggingface import HuggingFaceEmbedding
 import re
 import numpy as np
 
