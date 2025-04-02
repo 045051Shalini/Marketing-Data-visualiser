@@ -2,8 +2,12 @@ import streamlit as st
 import pandas as pd
 import plotly.express as px
 import json
+from llama_index.core import VectorStoreIndex, Document, get_response_synthesizer
 from llama_index.llms.groq import Groq
-from sentence_transformers import SentenceTransformer, util
+from llama_index.core.tools import QueryEngineTool, ToolMetadata
+from llama_index.agent.openai import OpenAIAgent
+from llama_index.core.agent import ReActAgent
+from sentence_transformers import SentenceTransformer
 import re
 import numpy as np
 
@@ -26,7 +30,7 @@ class EnhancedJSONEncoder(json.JSONEncoder):
             return str(obj)
 
 # Streamlit App Configuration
-st.set_page_config(page_title="LLM-Powered Data Visualizer", layout="wide")
+st.set_page_config(page_title="LLM Data Visualizer", layout="wide")
 
 # Data Loading
 def load_data(uploaded_file):
@@ -67,8 +71,8 @@ def setup_embeddings():
         st.error(f"Error initializing embeddings: {e}")
         return None
 
-# Generate Embeddings and Metadata
-def generate_data_embeddings_and_metadata(df, embed_model):
+# Initialize Tools
+def setup_tools(df, embed_model):
     def generate_metadata():
         def return_vals(col):
             try:
@@ -84,12 +88,18 @@ def generate_data_embeddings_and_metadata(df, embed_model):
         return json.dumps(metadata, cls=EnhancedJSONEncoder)
 
     metadata = generate_metadata()
-    insight_prompt = """When analyzing charts: 1. Identify trends and patterns 2. Highlight statistical outliers 3. Compare categorical performance 4. Note temporal patterns 5. Identify extremes 6. Calculate percentage changes 7. Correlate external events"""
-    embeddings = embed_model.encode([metadata, insight_prompt])
-    return embeddings[0], embeddings[1]
+    metadata_engine = VectorStoreIndex.from_documents([Document(text=metadata)], embed_model=embed_model).as_query_engine()
+
+    insight_prompt = "When analyzing charts: 1. Identify trends and patterns 2. Highlight statistical outliers 3. Compare categorical performance 4. Note temporal patterns 5. Identify extremes 6. Calculate percentage changes 7. Correlate external events"
+    insight_engine = VectorStoreIndex.from_documents([Document(text=insight_prompt)], embed_model=embed_model).as_query_engine()
+
+    metadata_tool = QueryEngineTool(query_engine=metadata_engine, metadata=ToolMetadata(name="metadata_tool", description="Useful for getting metadata about the data."))
+    insight_tool = QueryEngineTool(query_engine=insight_engine, metadata=ToolMetadata(name="insight_tool", description="Useful for getting insights about the data."))
+
+    return [metadata_tool, insight_tool]
 
 # Streamlit UI
-st.title("LLM-Powered Data Visualizer")
+st.title("LLM Data Visualizer")
 
 # File Upload
 with st.sidebar:
@@ -105,14 +115,11 @@ if not df.empty:
     query = st.text_area("Analysis Request:", "Generate a bar chart showing final_price distribution with insights", height=100)
     if st.button("Execute Analysis"):
         if llm and embed_model:
-            metadata_embedding, insight_embedding = generate_data_embeddings_and_metadata(df, embed_model)
-            query_embedding = embed_model.encode([query])[0]
-            metadata_similarity = util.cos_sim(query_embedding, metadata_embedding).item()
-            insight_similarity = util.cos_sim(query_embedding, insight_embedding).item()
-            full_query = f"{query}. Use this metadata (similarity: {metadata_similarity}): {json.dumps(metadata_embedding.tolist())}. Use these insights (similarity: {insight_similarity}): {json.dumps(insight_embedding.tolist())}"
-            response = llm.complete(full_query)
-            code_match = re.search(r"```python\n(.*?)\n```", response.text, re.DOTALL)
-            insight_match = re.search(r"Insights:(.*?)(?=```)", response.text, re.DOTALL)
+            tools = setup_tools(df, embed_model)
+            agent = ReActAgent.from_tools(tools, llm=llm, verbose=True)
+            response = agent.chat(query)
+            code_match = re.search(r"```python\n(.*?)\n```", str(response), re.DOTALL)
+            insight_match = re.search(r"Insights:(.*?)(?=```)", str(response), re.DOTALL)
             if code_match:
                 code = code_match.group(1)
                 st.subheader("Visualization")
@@ -126,7 +133,7 @@ if not df.empty:
                     st.markdown(insight_match.group(1).strip())
             else:
                 st.error("Code generation failed")
-                st.text(response.text)
+                st.text(str(response))
         else:
             st.error("Please configure LLM and/or Embeddings.")
 
