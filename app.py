@@ -30,6 +30,11 @@ def preprocess_data(df):
     column_types = detect_column_types(df)
     return df, column_types
 
+def extract_columns_from_prompt(prompt, df):
+    """Extract potential column names from the user prompt."""
+    mentioned_cols = [col for col in df.columns if col.lower() in prompt.lower()]
+    return mentioned_cols[:2] if len(mentioned_cols) >= 2 else None
+
 def main():
     st.set_page_config(layout="wide")
     st.title("📊 Marketing Data Visualizer with AI Insights")
@@ -62,24 +67,17 @@ def main():
             
             try:
                 # Check if the user specified chart type in the prompt
-                if 'bar' in user_prompt:
-                    chart_type = 'bar'
-                elif 'line' in user_prompt:
-                    chart_type = 'line'
-                elif 'scatter' in user_prompt:
-                    chart_type = 'scatter'
-                elif 'histogram' in user_prompt:
-                    chart_type = 'histogram'
-                elif 'pie' in user_prompt:
-                    chart_type = 'pie'
-                elif 'box' in user_prompt:
-                    chart_type = 'box'
-                else:
-                    chart_type = 'bar'  # Default chart type if not specified
+                chart_type_map = {'bar': 'bar', 'line': 'line', 'scatter': 'scatter', 'histogram': 'histogram', 'pie': 'pie', 'box': 'box'}
+                chart_type = next((v for k, v in chart_type_map.items() if k in user_prompt.lower()), 'bar')
                 
-                # Use the first two numeric columns (or any specific column names based on the prompt)
-                x_axis = df.select_dtypes(include=[np.number]).columns[0]
-                y_axis = df.select_dtypes(include=[np.number]).columns[1] if len(df.select_dtypes(include=[np.number]).columns) > 1 else df.select_dtypes(include=[np.number]).columns[0]
+                # Extract column names from the prompt if specified
+                extracted_cols = extract_columns_from_prompt(user_prompt, df)
+                
+                if extracted_cols:
+                    x_axis, y_axis = extracted_cols
+                else:
+                    x_axis = df.select_dtypes(include=[np.number]).columns[0]
+                    y_axis = df.select_dtypes(include=[np.number]).columns[1] if len(df.select_dtypes(include=[np.number]).columns) > 1 else df.select_dtypes(include=[np.number]).columns[0]
                 
                 # Generate the plot using the user prompt
                 fig = px.__getattribute__(chart_type)(df, x=x_axis, y=y_axis, title=f'{chart_type.capitalize()} Visualization')
