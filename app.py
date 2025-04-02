@@ -6,7 +6,7 @@ from llama_index.core import Settings, VectorStoreIndex, PromptTemplate, Documen
 from llama_index.core.tools import QueryEngineTool, ToolMetadata
 from llama_index.core.agent import ReActAgent
 from llama_index.llms.groq import Groq
-from llama_index.embeddings.huggingface import HuggingFaceEmbedding
+from llama_index.embeddings import HuggingFaceEmbedding
 import re
 import numpy as np
 
