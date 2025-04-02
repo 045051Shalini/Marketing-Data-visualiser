@@ -27,7 +27,7 @@ class EnhancedJSONEncoder(json.JSONEncoder):
         try:
             return super().default(obj)
         except TypeError:
-            return str(obj) # Convert any remaining non-serializable object to string
+            return str(obj)  # Convert any remaining non-serializable object to string
 
 # Streamlit App Configuration
 st.set_page_config(page_title="LLM-Powered Data Visualizer", layout="wide")
@@ -210,8 +210,8 @@ st.title("Multi-LLM Data Analysis Platform")
 with st.sidebar:
     st.header("Data Upload")
     uploaded_file = st.file_uploader("Upload CSV", type=["csv"], 
-                                   help="Upload your dataset in CSV format",
-                                   accept_multiple_files=False)
+                                    help="Upload your dataset in CSV format",
+                                    accept_multiple_files=False)
 
 # Main Interface
 df = load_data(uploaded_file)
@@ -228,7 +228,7 @@ if not df.empty:
         if agent:
             response = agent.chat(query)
             
-            code_match = re.search(r"````
+            code_match = re.search(r"```python\n(.*?)\n```", response.response, re.DOTALL)
             insight_match = re.search(r"Insights:(.*?)(?=```)", response.response, re.DOTALL)
             
             if code_match:
