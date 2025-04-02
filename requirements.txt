@@ -1,5 +1,5 @@
 streamlit 
-python==3.04
+python
 requests
 numpy
 regex
