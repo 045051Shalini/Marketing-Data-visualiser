@@ -228,7 +228,7 @@ if not df.empty:
         if agent:
             response = agent.chat(query)
             
-           code_match = re.search(r"``````", response.response, re.DOTALL)
+           code_match = re.search(r"```python\n(.*?)```
            insight_match = re.search(r"Insights:(.*?)(?=```)", response.response, re.DOTALL)
             
             if code_match:
