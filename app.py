@@ -1,189 +1,140 @@
 import streamlit as st
 import pandas as pd
 import plotly.express as px
-import requests
-import re
-from llama_index.llms.groq import Groq
+import json
+from llama_index.core import Settings, VectorStoreIndex, PromptTemplate
+from llama_index.core.tools import QueryEngineTool, ToolMetadata
 from llama_index.core.agent import ReActAgent
-from llama_index.core import PromptTemplate
+from llama_index.llms.groq import Groq
+from llama_index.readers.json import JSONReader
+from llama_index.embeddings.ollama import OllamaEmbedding
+import re
 
-# Configuration
-THEME_CONFIG = {
-    "primaryColor": "#4f8bff",
-    "backgroundColor": "#0e1117",
-    "textColor": "#f0f2f6"
-}
+# Streamlit App Configuration
+st.set_page_config(page_title="Marketing Data Visualizer", layout="wide")
 
-def configure_streamlit():
-    """Configure Streamlit page settings"""
-    st.set_page_config(
-        page_title="AI Data Visualizer",
-        page_icon="📊",
-        layout="wide",
-        initial_sidebar_state="expanded"
-    )
-    st.markdown(f"""
-        <style>
-            .reportview-container .main .block-container{{max-width: 1400px;}}
-            h1 {{color: {THEME_CONFIG['primaryColor']};}}
-            .stSelectbox, .stTextInput {{border: 1px solid {THEME_CONFIG['primaryColor']};}}
-        </style>
-    """, unsafe_allow_html=True)
+# Data Preparation (Move this to data loading section)
+@st.cache_data
+def load_data():
+    df = pd.read_csv('/home/ashok/Downloads/ecommerce_dataset_updated.csv')
+    df['Purchase_Date'] = pd.to_datetime(df['Purchase_Date'], dayfirst=True, errors='coerce')
+    numerical_cols = ['Price (Rs.)', 'Discount (%)', 'Final_Price(Rs.)']
+    df[numerical_cols] = df[numerical_cols].astype(float)
+    return df.fillna(0)
 
-def validate_data(df):
-    """Perform data validation checks"""
-    if df.empty:
-        st.error("Uploaded file is empty")
-        return False
-    return True
+df = load_data()
 
-def generate_visualization_code(llm, df, chart_type, x_col, y_col):
-    """Generate visualization code using Groq LLM"""
-    system_prompt = f"""
-    You are an expert data visualization assistant. Generate valid Plotly Express code with these requirements:
-    1. Use DataFrame 'df' provided in context
-    2. Chart type: {chart_type}
-    3. X-axis: {x_col} ({df[x_col].dtype})
-    4. Y-axis: {y_col} ({df[y_col].dtype})
-    5. Include proper axis labels and titles
-    6. Use modern color schemes
-    7. Return ONLY the Python code wrapped in ```
-    8. After code, provide insights specific to this data relationship:
-       - Statistical correlation between columns
-       - Notable patterns/trends
-       - Data distribution characteristics
-       - Potential anomalies
-    """
+# Initialize LLM and Embeddings
+Settings.llm = Groq(model="llama3-70b-8192", api_key="YOUR_GROQ_API_KEY")
+Settings.embed_model = OllamaEmbedding(
+    model_name="nomic-embed-text",
+    base_url="http://localhost:11434"
+)
+
+# Initialize Tools
+def setup_tools():
+    # Data Metadata Tool
+    def generate_metadata():
+        def return_vals(col):
+            if pd.api.types.is_numeric_dtype(df[col]):
+                return [float(df[col].max()), float(df[col].min()), float(df[col].mean())]
+            elif pd.api.types.is_datetime64_any_dtype(df[col]):
+                return [str(df[col].max()), str(df[col].min()), str(df[col].mean())]
+            return df[col].value_counts().nlargest(10).to_dict()
+
+        metadata = {
+            col: {
+                "type": str(df[col].dtype),
+                "stats": return_vals(col)
+            } for col in df.columns
+        }
+        return metadata
+
+    metadata = generate_metadata()
+    metadata_engine = VectorStoreIndex.from_documents([Document(text=json.dumps(metadata))])
     
-    try:
-        agent = ReActAgent.from_tools([], llm=llm, verbose=False)
-        response = agent.chat(system_prompt)
-        st.write("LLM Response:", response.response)  # Debugging output
-        return response.response
-    except Exception as e:
-        st.error(f"API Error: {str(e)}")
-        return None
-
-def clean_code(code_block):
-    """Clean the code block by removing triple backticks and extra spaces"""
-    return code_block.strip().replace("```python", "").replace("```", "").strip()
-
-def execute_visualization_code(code_block):
-    """Send the code to the Java backend for execution"""
-    try:
-        response = requests.post("http://localhost:8080/api/execute", json={"code": code_block})
-        return response.text
-    except Exception as e:
-        st.error(f"Execution Error: {str(e)}")
-        return None
-
-def handle_user_question(llm, df, question, context):
-    """Handle user questions with full context"""
-    qa_prompt = f"""
-    Context: {context}
-    Dataset Columns: {list(df.columns)}
-    Sample Data:
-    {df.head(3).to_markdown()}
+    # Chart Insight Tool
+    insight_prompt = Document(text="""
+    When analyzing charts:
+    1. Identify trends (monthly/yearly patterns)
+    2. Highlight anomalies (spikes/drops)
+    3. Compare category performance
+    4. Note seasonality patterns
+    5. Identify top/bottom performers
+    6. Calculate percentage changes
+    7. Correlate with marketing events
+    """)
+    insight_index = VectorStoreIndex.from_documents([insight_prompt])
     
-    Question: {question}
-    
-    Provide a detailed answer with:
-    1. Specific data points from the dataset
-    2. Statistical analysis
-    3. Visualization interpretation
-    4. Potential next steps
-    """
-    
-    try:
-        agent = ReActAgent.from_tools([], llm=llm, verbose=False)
-        response = agent.chat(qa_prompt)
-        return response.response
-    except Exception as e:
-        return f"Error processing question: {str(e)}"
+    return [
+        QueryEngineTool(
+            query_engine=metadata_engine.as_query_engine(),
+            metadata=ToolMetadata(
+                name="data_metadata",
+                description="Access dataset statistics and column information"
+            )
+        ),
+        QueryEngineTool(
+            query_engine=insight_index.as_query_engine(),
+            metadata=ToolMetadata(
+                name="chart_insights",
+                description="Provides analytical frameworks for chart interpretation"
+            )
+        )
+    ]
 
-def main():
-    configure_streamlit()
-    st.title("📊 Smart Data Visualizer with AI Analytics")
+# Agent Configuration
+def create_agent():
+    tools = setup_tools()
+    agent = ReActAgent.from_tools(tools, llm=Settings.llm, verbose=True)
     
-    # Sidebar controls
-    with st.sidebar:
-        st.header("Data Configuration")
-        uploaded_file = st.file_uploader("Upload CSV", type=["csv"])
-        api_key = st.text_input("Groq API Key", type="password")
-        model_name = st.selectbox("AI Model", ["mixtral-8x7b-32768", "llama3-70b-8192"])
+    agent.update_prompts({
+        "agent_worker:system_prompt": PromptTemplate("""
+        You are an intelligent marketing data visualization assistant with capabilities to:
+        1. Generate Plotly visualizations
+        2. Provide analytical insights
+        3. Handle complex data requests
+        4. Explain technical concepts
+        Always use available tools for metadata and insights.
+        """)
+    })
+    return agent
+
+# Streamlit UI
+st.title("AI-Powered Marketing Data Visualizer")
+query = st.text_area("Enter your visualization request:", 
+                    "Generate a bar chart for Final_Price(Rs.) over Purchase_Date with insights")
+
+if st.button("Generate Visualization"):
+    agent = create_agent()
+    response = agent.chat(query)
+    
+    # Code Extraction
+    code_match = re.search(r"``````", response.response, re.DOTALL)
+    insight_match = re.search(r"Insights:(.*?)(?=```
+    
+    if code_match:
+        code = code_match.group(1)
+        st.subheader("Generated Visualization")
         
-    if uploaded_file and api_key:
-        df = pd.read_csv(uploaded_file)
-        if not validate_data(df):
-            return
-            
-        # Initialize Groq client correctly
-        llm = Groq(model=model_name, api_key=api_key)
+        try:
+            exec(code, globals(), {'df': df, 'px': px, 'st': st})
+        except Exception as e:
+            st.error(f"Error executing code: {str(e)}")
         
-        with st.sidebar:
-            st.header("Visualization Settings")
-            cols = st.columns(2)  # Creates two columns
-            x_col = cols[0].selectbox("X-Axis", df.columns)
-            y_col = cols[1].selectbox("Y-Axis", df.columns)
-                
-            chart_type = st.selectbox("Chart Type", [
-                "bar", "line", "scatter", 
-                "histogram", "box", "violin"
-            ])
-            
-            with st.expander("Advanced Options"):
-                color_scale = st.selectbox("Color Scale", px.colors.named_colorscales())
-                template = st.selectbox("Theme", ["plotly", "plotly_white", "plotly_dark"])
-        
-        # Main content area
-        col1, col2 = st.columns([3,1])
-        
-        with col1:
-            if st.button("Generate Visualization", use_container_width=True):
-                with st.spinner("Analyzing data and creating visualization..."):
-                    response = generate_visualization_code(llm, df, chart_type, x_col, y_col)
-                    
-                    if response:
-                        # Extract code and insights
-                        code_match = re.search(r"```python\n(.*?)```", response, re.DOTALL)
-                        insights_match = re.search(r"Insights:(.*?$)", response, re.DOTALL)
-                        
-                        if code_match:
-                            code = clean_code(code_match.group(1))
-                            st.subheader("Generated Python Code")
-                            st.code(code, language="python")
-                            
-                            execution_result = execute_visualization_code(code)
-                            st.text(execution_result)
-                            
-                            # Display insights
-                            if insights_match:
-                                insights = insights_match.group(1).strip()
-                                st.subheader("Insights")
-                                st.markdown(insights)
-                            else:
-                                st.warning("No insights generated")
-                        else:
-                            st.error("No valid code generated")
-                            st.code(response)  # Debug output
+        if insight_match:
+            st.subheader("AI Analysis")
+            st.markdown(insight_match.group(1).strip())
+    else:
+        st.error("No valid code generated. Response:")
+        st.text(response.response)
 
-        with col2:
-            with st.expander("🔍 Data Preview"):
-                st.dataframe(df.head(10), height=300)
-                
-            with st.expander("📝 Ask Question"):
-                user_question = st.text_input("Enter your question:")
-                if user_question:
-                    context = f"""
-                        Visualization Context:
-                        - Type: {chart_type}
-                        - X: {x_col} ({df[x_col].dtype})
-                        - Y: {y_col} ({df[y_col].dtype})
-                        - Sample X Values: {df[x_col].sample(3).tolist()}
-                        - Sample Y Values: {df[y_col].sample(3).tolist()}
-                    """
-                    answer = handle_user_question(llm, df, user_question, context)
-                    st.markdown(f"**AI Analysis:**\n{answer}")
-
-if __name__ == "__main__":
-    main()
+# Sidebar Configuration
+with st.sidebar:
+    st.header("Dataset Preview")
+    st.dataframe(df.head(10))
+    
+    st.header("Column Summary")
+    st.json({
+        col: str(df[col].dtype) for col in df.columns
+    })
