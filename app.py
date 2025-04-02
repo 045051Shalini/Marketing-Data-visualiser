@@ -38,15 +38,15 @@ def load_data(uploaded_file):
         try:
             df = pd.read_csv(uploaded_file)
             df.columns = df.columns.str.strip().str.lower()
-            
+
             date_cols = [col for col in df.columns if 'date' in col]
             for col in date_cols:
                 df[col] = pd.to_datetime(df[col], errors='coerce')
-            
+
             num_cols = [col for col in df.columns if df[col].dtype == 'object']
             for col in num_cols:
                 df[col] = pd.to_numeric(df[col], errors='ignore')
-            
+
             return df.dropna(how='all').fillna(0)
         except Exception as e:
             st.error(f"Error loading file: {str(e)}")
@@ -57,14 +57,14 @@ def load_data(uploaded_file):
 def setup_llm():
     with st.sidebar:
         st.header("LLM Configuration")
-        
+
         llm_provider = st.radio(
             "Select LLM Provider",
             ("Groq", "OpenAI", "Custom"),
             index=0,
             help="Choose your preferred LLM provider"
         )
-        
+
         if llm_provider == "Groq":
             api_key = st.text_input(
                 "Groq API Key",
@@ -77,7 +77,7 @@ def setup_llm():
                 except Exception as e:
                     st.error(f"Invalid Groq API key: {str(e)}")
                     return None
-                
+
         elif llm_provider == "OpenAI":
             api_key = st.text_input(
                 "OpenAI API Key",
@@ -90,7 +90,7 @@ def setup_llm():
                 except Exception as e:
                     st.error(f"Invalid OpenAI API key: {str(e)}")
                     return None
-                
+
         elif llm_provider == "Custom":
             model_name = st.text_input(
                 "Custom Model Name",
@@ -107,7 +107,7 @@ def setup_llm():
                 except Exception as e:
                     st.error(f"Connection error: {str(e)}")
                     return None
-                
+
         return None
 
 # Initialize Embeddings
@@ -147,7 +147,7 @@ def setup_tools(df):
 
     metadata = generate_metadata()
     metadata_engine = VectorStoreIndex.from_documents([Document(text=json.dumps(metadata, cls=EnhancedJSONEncoder))])
-    
+
     insight_prompt = Document(text="""
     When analyzing charts:
     1. Identify trends and patterns
@@ -159,7 +159,7 @@ def setup_tools(df):
     7. Correlate external events
     """)
     insight_index = VectorStoreIndex.from_documents([insight_prompt])
-    
+
     return [
         QueryEngineTool(
             query_engine=metadata_engine.as_query_engine(),
@@ -182,11 +182,11 @@ def create_agent(df, llm):
     if llm is None:
         st.error("Please configure LLM settings first")
         return None
-    
+
     try:
         tools = setup_tools(df)
         agent = ReActAgent.from_tools(tools, llm=llm, verbose=True)
-        
+
         agent.update_prompts({
             "agent_worker:system_prompt": PromptTemplate("""
             You are an advanced data analysis assistant with capabilities to:
@@ -194,7 +194,7 @@ def create_agent(df, llm):
             2. Provide business insights
             3. Handle complex data requests
             4. Explain technical concepts
-            
+
             Always use available tools for metadata and insights.
             """)
         })
@@ -209,7 +209,7 @@ st.title("Multi-LLM Data Analysis Platform")
 # File Upload Section
 with st.sidebar:
     st.header("Data Upload")
-    uploaded_file = st.file_uploader("Upload CSV", type=["csv"], 
+    uploaded_file = st.file_uploader("Upload CSV", type=["csv"],
                                    help="Upload your dataset in CSV format",
                                    accept_multiple_files=False)
 
@@ -218,29 +218,29 @@ df = load_data(uploaded_file)
 llm = setup_llm()
 
 if not df.empty:
-    query = st.text_area("Analysis Request:", 
+    query = st.text_area("Analysis Request:",
                         "Generate a bar chart showing final_price distribution with insights",
                         height=100)
-    
+
     if st.button("Execute Analysis"):
         agent = create_agent(df, llm)
-        
+
         if agent:
             response = agent.chat(query)
-            
-           code_match = re.search(r"```python\n(.*?)```
-           insight_match = re.search(r"Insights:(.*?)(?=```)", response.response, re.DOTALL))
-            
+
+            code_match = re.search(r"``````", response.response, re.DOTALL)
+            insight_match = re.search(r"Insights:(.*?)(?=```
+
             if code_match:
                 code = code_match.group(1)
                 st.subheader("Visualization")
-                
+
                 try:
                     exec(code, globals(), {'df': df, 'px': px, 'st': st})
                 except Exception as e:
                     st.error(f"Execution error: {str(e)}")
                     st.code(code)
-                
+
                 if insight_match:
                     st.subheader("AI Insights")
                     st.markdown(insight_match.group(1).strip())
@@ -252,7 +252,7 @@ if not df.empty:
     with st.sidebar:
         st.header("Dataset Preview")
         st.dataframe(df.head(5))
-        
+
         st.header("Column Summary")
         st.json({
             col: {
