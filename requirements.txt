@@ -10,4 +10,4 @@ pyperclip
 tabulate
 requests
 llama-index-embeddings
-SentenceTransformer
+sentence-transformers
