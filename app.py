@@ -9,6 +9,20 @@ from llama_index.llms.groq import Groq
 from llama_index.llms.openai import OpenAI
 from llama_index.embeddings.ollama import OllamaEmbedding
 import re
+import numpy as np
+
+# Custom JSON Encoder to handle NumPy types
+class NumpyEncoder(json.JSONEncoder):
+    def default(self, obj):
+        if isinstance(obj, np.integer):
+            return int(obj)
+        elif isinstance(obj, np.floating):
+            return float(obj)
+        elif isinstance(obj, np.ndarray):
+            return obj.tolist()
+        elif isinstance(obj, pd.Timestamp):
+            return str(obj)  # Convert pandas Timestamp to string
+        return super(NumpyEncoder, self).default(obj)
 
 # Streamlit App Configuration
 st.set_page_config(page_title="LLM-Powered Data Visualizer", layout="wide")
@@ -92,10 +106,13 @@ def setup_llm():
         return None
 
 # Initialize Embeddings
-Settings.embed_model = OllamaEmbedding(
-    model_name="nomic-embed-text",
-    base_url="http://localhost:11434"
-)
+try:
+    Settings.embed_model = OllamaEmbedding(
+        model_name="nomic-embed-text",
+        base_url="http://localhost:11434"
+    )
+except Exception as e:
+    st.error(f"Error initializing embeddings: {e}")
 
 # Initialize Tools
 def setup_tools(df):
@@ -105,18 +122,26 @@ def setup_tools(df):
                 return [float(df[col].max()), float(df[col].min()), float(df[col].mean())]
             elif pd.api.types.is_datetime64_any_dtype(df[col]):
                 return [str(df[col].max()), str(df[col].min()), str(df[col].mean())]
-            return df[col].value_counts().nlargest(10).to_dict()
+            try:
+                return df[col].astype(str).value_counts().nlargest(10).to_dict()
+            except TypeError as e:
+                st.error(f"Error during value counts: {e}")
+                return {}
 
-        metadata = {
-            col: {
-                "type": str(df[col].dtype),
-                "stats": return_vals(col)
-            } for col in df.columns
-        }
+        metadata = {}
+        for col in df.columns:
+            try:
+                metadata[col] = {
+                    "type": str(df[col].dtype),
+                    "stats": return_vals(col)
+                }
+            except Exception as e:
+                st.error(f"Error generating metadata for column {col}: {e}")
+                metadata[col] = {"type": "unknown", "stats": {}}
         return metadata
 
     metadata = generate_metadata()
-    metadata_engine = VectorStoreIndex.from_documents([Document(text=json.dumps(metadata))])
+    metadata_engine = VectorStoreIndex.from_documents([Document(text=json.dumps(metadata, cls=NumpyEncoder))])
     
     insight_prompt = Document(text="""
     When analyzing charts:
@@ -195,7 +220,7 @@ if not df.empty:
             response = agent.chat(query)
             
             code_match = re.search(r"``````", response.response, re.DOTALL)
-            insight_match = re.search(r"Insights:(.*?)(?=```)", response.response, re.DOTALL)
+            insight_match = re.search(r"Insights:(.*?)(?=```
             
             if code_match:
                 code = code_match.group(1)
