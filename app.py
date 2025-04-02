@@ -5,8 +5,7 @@ import json
 from llama_index.core import VectorStoreIndex, Document, get_response_synthesizer
 from llama_index.llms.groq import Groq
 from llama_index.core.tools import QueryEngineTool, ToolMetadata
-from llama_index.agent.openai import OpenAIAgent
-from llama_index.core.agent import ReActAgent
+from llama_index.core.agent import ReActAgent  # Correct import
 from sentence_transformers import SentenceTransformer
 import re
 import numpy as np
