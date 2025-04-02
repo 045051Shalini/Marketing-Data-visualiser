@@ -10,3 +10,4 @@ pyperclip
 tabulate
 requests
 sentence-transformers
+torch
