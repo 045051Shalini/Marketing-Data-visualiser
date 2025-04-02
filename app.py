@@ -21,7 +21,11 @@ def load_data(uploaded_file):
                 df[col] = pd.to_datetime(df[col], errors='coerce')
             num_cols = [col for col in df.columns if df[col].dtype == 'object']
             for col in num_cols:
-                df[col] = pd.to_numeric(df[col], errors='ignore')
+                try:
+                    df[col] = pd.to_numeric(df[col])
+                except ValueError:
+                    pass
+                
             return df.dropna(how='all').fillna(0)
         except Exception as e:
             st.error(f"Error loading file: {str(e)}")
