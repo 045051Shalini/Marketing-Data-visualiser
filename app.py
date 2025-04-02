@@ -2,10 +2,10 @@ import streamlit as st
 import pandas as pd
 import plotly.express as px
 import json
-from llama_index.core import Settings, VectorStoreIndex, PromptTemplate, Document
+from llama_index.core import VectorStoreIndex, PromptTemplate, Document
 from llama_index.core.tools import QueryEngineTool, ToolMetadata
-from llama_index.core.agent import ReActAgent
 from llama_index.llms.groq import Groq
+from llama_index.embeddings import HuggingFaceEmbedding
 import re
 import numpy as np
 
@@ -117,54 +117,10 @@ def setup_tools(df, embed_model):
     """)
     insight_index = VectorStoreIndex.from_documents([insight_prompt], embed_model=embed_model).as_query_engine()
     
-    return [
-        QueryEngineTool(
-            query_engine=metadata_engine,
-            metadata=ToolMetadata(
-                name="data_metadata",
-                description="Access dataset statistics and column information"
-            )
-        ),
-        QueryEngineTool(
-            query_engine=insight_index,
-            metadata=ToolMetadata(
-                name="chart_insights",
-                description="Provides analytical frameworks for chart interpretation"
-            )
-        )
-    ]
-
-# Agent Configuration
-def create_agent(df, llm, embed_model):
-    if llm is None:
-        st.error("Please configure LLM settings first")
-        return None
-    if embed_model is None:
-        st.error("Please configure Embeddings settings first")
-        return None
-    
-    try:
-        tools = setup_tools(df, embed_model)
-        agent = ReActAgent.from_tools(tools, llm=llm, verbose=True)
-        
-        agent.update_prompts({
-            "agent_worker:system_prompt": PromptTemplate("""
-            You are an advanced data analysis assistant with capabilities to:
-            1. Generate professional visualizations
-            2. Provide business insights
-            3. Handle complex data requests
-            4. Explain technical concepts
-            
-            Always use available tools for metadata and insights.
-            """)
-        })
-        return agent
-    except Exception as e:
-        st.error(f"Error creating agent: {e}")
-        return None
+    return metadata_engine, insight_index
 
 # Streamlit UI
-st.title("Multi-LLM Data Analysis Platform")
+st.title("LLM-Powered Data Visualizer")
 
 # File Upload Section
 with st.sidebar:
@@ -184,14 +140,19 @@ if not df.empty:
                         height=100)
     
     if st.button("Execute Analysis"):
-        agent = create_agent(df, llm, embed_model)
-        
-        if agent:
-            response = agent.chat(query)
-            
-            code_match = re.search(r"```python\n(.*?)\n```", response.response, re.DOTALL)
-            insight_match = re.search(r"Insights:(.*?)(?=```)", response.response, re.DOTALL)
-            
+        if llm and embed_model:
+            metadata_engine, insight_index = setup_tools(df, embed_model)
+
+            metadata_response = metadata_engine.query(query)
+            insight_response = insight_index.query(query)
+
+            full_query = f"{query}. Use this metadata: {metadata_response.response}. Use these insights: {insight_response.response}"
+
+            response = llm.complete(full_query)
+
+            code_match = re.search(r"```python\n(.*?)\n```", response.text, re.DOTALL)
+            insight_match = re.search(r"Insights:(.*?)(?=```)", response.text, re.DOTALL)
+
             if code_match:
                 code = code_match.group(1)
                 st.subheader("Visualization")
@@ -207,7 +168,9 @@ if not df.empty:
                     st.markdown(insight_match.group(1).strip())
             else:
                 st.error("Code generation failed")
-                st.text(response.response)
+                st.text(response.text)
+        else:
+            st.error("Please configure LLM and/or Embeddings.")
 
     # Data Inspection
     with st.sidebar:
