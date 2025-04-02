@@ -50,6 +50,9 @@ class GeneratePythonCodeTool(BaseTool):
         description="Generates Python code using pandas and plotly to visualize the given data.",
     )
 
+    def __init__(self):
+        pass
+
     def _run(self, query: str) -> str:
         """Use the Groq LLM to generate Python code based on the query."""
 
@@ -77,6 +80,9 @@ class GenerateInsightsTool(BaseTool):
         name="generate_insights",
         description="Generates insights from the data based on the user's query.",
     )
+
+    def __init__(self):
+        pass
 
     def _run(self, query: str) -> str:
         """Use the Groq LLM to generate insights based on the query."""
