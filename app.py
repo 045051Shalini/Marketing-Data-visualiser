@@ -6,8 +6,7 @@ from llama_index.core import Settings, VectorStoreIndex, PromptTemplate, Documen
 from llama_index.core.tools import QueryEngineTool, ToolMetadata
 from llama_index.core.agent import ReActAgent
 from llama_index.llms.groq import Groq
-from llama_index.llms.openai import OpenAI
-from llama_index.embeddings.openai import OpenAIEmbedding
+from llama_index.embeddings import HuggingFaceEmbedding
 import re
 import numpy as np
 
@@ -72,19 +71,12 @@ def setup_llm():
 
 # Initialize Embeddings
 def setup_embeddings():
-    with st.sidebar:
-        api_key_embed = st.text_input(
-            "OpenAI Embeddings API Key",
-            type="password",
-            help="Get your OpenAI API key from https://platform.openai.com/"
-        )
-        if api_key_embed:
-            try:
-                return OpenAIEmbedding(api_key=api_key_embed)
-            except Exception as e:
-                st.error(f"Invalid OpenAI Embeddings API key: {str(e)}")
-                return None
+    try:
+        return HuggingFaceEmbedding(model_name="sentence-transformers/all-mpnet-base-v2")
+    except Exception as e:
+        st.error(f"Error initializing embeddings: {e}")
         return None
+
 # Initialize Tools
 def setup_tools(df, embed_model):
     def generate_metadata():
