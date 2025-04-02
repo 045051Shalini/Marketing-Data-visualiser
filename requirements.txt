@@ -10,3 +10,4 @@ pyperclip
 tabulate
 requests
 llama-index-embeddings-ollama
+HuggingFaceEmbedding
