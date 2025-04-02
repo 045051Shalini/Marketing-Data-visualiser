@@ -3,7 +3,7 @@ python
 requests
 numpy
 regex
-groq
+Groq
 llama_index
 pandas
 numpy
