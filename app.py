@@ -56,14 +56,16 @@ class GeneratePythonCodeTool(BaseTool):
     def __init__(self):
         pass
 
-    def __call__(self, query: str) -> str:
+    def __call__(self, input: str, chart_type: str = None) -> str:
         """Use the Groq LLM to generate Python code based on the query."""
 
         llm = setup_llm()
         if not llm:
             return "Please provide a valid Groq API key."
 
-        prompt = f"""Given the following data analysis request: "{query}", generate Python code using pandas and plotly to visualize the data. Ensure the code is self-contained and executable. Do not explain the code, just return the code. Return the code in a code block. Do not return any other text."""
+        prompt = f"""Given the following data analysis request: "{input}", generate Python code using pandas and plotly to visualize the data. Ensure the code is self-contained and executable. Do not explain the code, just return the code. Return the code in a code block. Do not return any other text."""
+        if chart_type:
+            prompt += f" Generate a {chart_type} chart."
 
         response = llm.complete(prompt)
         code_match = re.search(r"```python\n(.*?)\n```", response.text, re.DOTALL)
@@ -84,14 +86,14 @@ class GenerateInsightsTool(BaseTool):
     def __init__(self):
         pass
 
-    def __call__(self, query: str) -> str:
+    def __call__(self, input: str) -> str:
         """Use the Groq LLM to generate insights based on the query."""
 
         llm = setup_llm()
         if not llm:
             return "Please provide a valid Groq API key."
 
-        prompt = f"""Given the following data analysis request: "{query}", generate insights from the data. Be concise and focus on key observations. Do not return any code. Do not return any other text."""
+        prompt = f"""Given the following data analysis request: "{input}", generate insights from the data. Be concise and focus on key observations. Do not return any code. Do not return any other text."""
 
         response = llm.complete(prompt)
         return response.text
@@ -113,7 +115,7 @@ if not df.empty:
     if st.button("Execute Analysis"):
         if llm:
             tools = [GeneratePythonCodeTool(), GenerateInsightsTool()]
-            agent = ReActAgent.from_tools(tools, llm=llm, verbose=True)
+            agent = ReActAgent.from_tools(tools, llm=llm, verbose=True, max_iterations=10)
             response = agent.chat(query)
 
             code_match = re.search(r"```python\n(.*?)\n```", str(response), re.DOTALL)
