@@ -9,3 +9,4 @@ regex
 pyperclip
 tabulate
 requests
+llama-index-embeddings-ollama
