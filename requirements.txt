@@ -9,5 +9,5 @@ regex
 pyperclip
 tabulate
 requests
-llama-index-embeddings-ollama
-HuggingFaceEmbedding
+llama-index-embeddings-HuggingFaceEmbedding
+
