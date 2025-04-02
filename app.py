@@ -5,7 +5,7 @@ import json
 from llama_index.core import VectorStoreIndex, PromptTemplate, Document
 from llama_index.core.tools import QueryEngineTool, ToolMetadata
 from llama_index.llms.groq import Groq
-from sentence_transformers import SentenceTransformer  # Import SentenceTransformer
+from llama_index.embeddings import HuggingFaceEmbedding  # Correct import
 import re
 import numpy as np
 
@@ -71,7 +71,7 @@ def setup_llm():
 # Initialize Embeddings
 def setup_embeddings():
     try:
-        return SentenceTransformer("BAAI/bge-small-en-v1.5")  # Use SentenceTransformer directly
+        return HuggingFaceEmbedding(model_name="BAAI/bge-small-en-v1.5")
     except Exception as e:
         st.error(f"Error initializing embeddings: {e}")
         return None
@@ -103,7 +103,7 @@ def setup_tools(df, embed_model):
         return metadata
 
     metadata = generate_metadata()
-    metadata_engine = VectorStoreIndex.from_documents([Document(text=json.dumps(metadata, cls=EnhancedJSONEncoder))], embed_model=embed_model).as_query_engine(similarity_top_k=1)
+    metadata_engine = VectorStoreIndex.from_documents([Document(text=json.dumps(metadata, cls=EnhancedJSONEncoder))], embed_model=embed_model).as_query_engine()
     
     insight_prompt = Document(text="""
     When analyzing charts:
@@ -115,7 +115,7 @@ def setup_tools(df, embed_model):
     6. Calculate percentage changes
     7. Correlate external events
     """)
-    insight_index = VectorStoreIndex.from_documents([insight_prompt], embed_model=embed_model).as_query_engine(similarity_top_k=1)
+    insight_index = VectorStoreIndex.from_documents([insight_prompt], embed_model=embed_model).as_query_engine()
     
     return metadata_engine, insight_index
 
