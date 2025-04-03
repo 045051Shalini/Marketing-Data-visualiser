@@ -11,3 +11,4 @@ tabulate
 requests
 llama-index-tools
 altair
+llama-index-embeddings-ollama
