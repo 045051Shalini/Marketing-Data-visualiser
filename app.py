@@ -3,7 +3,6 @@ import pandas as pd
 import numpy as np
 import plotly.express as px
 import re
-import traceback
 import json
 from llama_index.core import VectorStoreIndex, Document, PromptTemplate
 from llama_index.core.agent import ReActAgent
