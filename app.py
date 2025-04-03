@@ -2,7 +2,7 @@ import streamlit as st
 import pandas as pd
 import plotly.express as px
 from llama_index.core import Settings
-from llama_index.llms.
+from llama_index.llms.groq import Groq
 from llama_index.embeddings.ollama import OllamaEmbedding
 from llama_index.core.tools import FunctionTool
 from llama_index.core.agent import FunctionCallingAgentWorker, AgentRunner
