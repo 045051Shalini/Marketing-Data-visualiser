@@ -1,75 +1,99 @@
 import streamlit as st
 import pandas as pd
+import numpy as np
 import plotly.express as px
-from llama_index.core import Settings
+import traceback
 from llama_index.llms.groq import Groq
-from llama_index.embeddings.ollama import OllamaEmbedding
-from llama_index.core.tools import FunctionTool
-from llama_index.core.agent import FunctionCallingAgentWorker, AgentRunner
 
-# Configure LLM and embeddings
-embed_model = OllamaEmbedding
-Settings.embed_model = embed_model
-
-llm = MistralAI(_key="VIScv20xwi7bmBbxZ6SiNJzkh35ZOWvM")
-Settings.llm = llm
-
-# Streamlit UI
-st.set_page_config(page_title="AI-Powered Data Visualizer", page_icon="📊", layout="wide")
-st.title("Chat-Based Data Visualizer 💬📊")
-
-# Upload data
-uploaded_file = st.file_uploader("Upload CSV file", type=["csv"])
-
-data = None
-if uploaded_file is not None:
-    data = pd.read_csv(uploaded_file)
-    st.write("### Preview of Uploaded Data")
-    st.dataframe(data.head())
-
-# Visualization tool
-async def visualize_data(query: str) -> str:
-    """Generate a visualization based on user input."""
-    if data is None:
-        return "No data uploaded. Please upload a CSV file."
-    
-    try:
-        if "bar" in query.lower():
-            fig = px.bar(data, x=data.columns[0], y=data.columns[1])
-        elif "scatter" in query.lower():
-            fig = px.scatter(data, x=data.columns[0], y=data.columns[1])
-        elif "line" in query.lower():
-            fig = px.line(data, x=data.columns[0], y=data.columns[1])
+def detect_column_types(df):
+    column_types = {}
+    for col in df.columns:
+        if pd.api.types.is_numeric_dtype(df[col]):
+            column_types[col] = "numeric"
+        elif pd.api.types.is_datetime64_any_dtype(df[col]) or pd.to_datetime(df[col], errors='coerce').notna().any():
+            df[col] = pd.to_datetime(df[col], errors='coerce')
+            column_types[col] = "datetime"
         else:
-            return "Unsupported chart type. Try bar, scatter, or line."
-        
-        st.plotly_chart(fig)
-        return "Visualization generated successfully!"
+            column_types[col] = "categorical"
+    return column_types
+
+def preprocess_data(df):
+    df = df.fillna(0)
+    column_types = detect_column_types(df)
+    return df, column_types
+
+def generate_statistical_insights(df, x_axis, y_axis):
+    insights = []
+    if pd.api.types.is_numeric_dtype(df[y_axis]):
+        insights.append(f"Mean of {y_axis}: {df[y_axis].mean():.2f}")
+        insights.append(f"Median of {y_axis}: {df[y_axis].median():.2f}")
+        insights.append(f"Standard Deviation: {df[y_axis].std():.2f}")
+        if df[y_axis].skew() > 1:
+            insights.append(f"{y_axis} is right-skewed, indicating a longer tail on the right.")
+        elif df[y_axis].skew() < -1:
+            insights.append(f"{y_axis} is left-skewed, indicating a longer tail on the left.")
+    if x_axis in df.select_dtypes(include=['object', 'category']).columns:
+        most_common = df[x_axis].mode()[0]
+        insights.append(f"Most common category in {x_axis}: {most_common}")
+    return "\n".join(insights)
+
+def query_ai(prompt, df, x_axis, y_axis, chart_type):
+    try:
+        llm = Groq(model="llama3-70b-8192", api_key="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")
+        df_summary = df[[x_axis, y_axis]].describe().to_dict()
+        full_prompt = f"Dataset Summary: {df_summary}\nChart Type: {chart_type}\n{prompt}"
+        response = llm.complete(full_prompt)
+        return response.text.strip() if response and hasattr(response, "text") else "No AI insights available."
     except Exception as e:
-        return f"Error generating visualization: {str(e)}"
+        return f"AI error: {str(e)}"
 
-visualization_tool = FunctionTool.from_defaults(fn=visualize_data)
-
-# AI Agent
-agent_worker = FunctionCallingAgentWorker.from_tools([visualization_tool], llm=llm, verbose=True)
-agent = AgentRunner(agent_worker)
-
-if "messages" not in st.session_state.keys():
-    st.session_state.messages = [{"role": "assistant", "content": "Upload a CSV and ask me to visualize it!"}]
-
-if "chat_engine" not in st.session_state.keys():
-    st.session_state.chat_engine = agent
-
-if prompt := st.chat_input("Ask for a visualization (e.g., 'Show a bar chart')"):
-    st.session_state.messages.append({"role": "user", "content": prompt})
-
-for message in st.session_state.messages:
-    with st.chat_message(message["role"]):
-        st.write(message["content"])
-
-if st.session_state.messages[-1]["role"] != "assistant":
-    with st.chat_message("assistant"):
-        response = st.session_state.chat_engine.chat(prompt)
-        st.write(response.response)
-        message = {"role": "assistant", "content": response.response}
-        st.session_state.messages.append(message)
+def main():
+    st.title("Enhanced Data Visualizer with AI Insights")
+    uploaded_file = st.file_uploader("Upload your dataset (CSV file)", type=["csv"])
+    
+    if uploaded_file is not None:
+        try:
+            df = pd.read_csv(uploaded_file)
+            df, column_types = preprocess_data(df)
+            
+            st.success("Dataset uploaded and processed successfully!")
+            x_axis = st.selectbox("Select X-axis:", df.columns)
+            y_axis = st.selectbox("Select Y-axis:", df.columns)
+            chart_type = st.selectbox("Select Chart Type:", ["bar", "line", "scatter"])
+            
+            if x_axis == y_axis:
+                st.error("X-axis and Y-axis cannot be the same. Please select different columns.")
+                return
+            
+            # Generate graph
+            if chart_type == "bar":
+                fig = px.bar(df, x=x_axis, y=y_axis, title=f"{chart_type.capitalize()} Chart of {y_axis} vs {x_axis}")
+            elif chart_type == "line":
+                fig = px.line(df, x=x_axis, y=y_axis, title=f"{chart_type.capitalize()} Chart of {y_axis} vs {x_axis}")
+            elif chart_type == "scatter":
+                fig = px.scatter(df, x=x_axis, y=y_axis, title=f"{chart_type.capitalize()} Chart of {y_axis} vs {x_axis}")
+            
+            fig.update_layout(xaxis_title=x_axis, yaxis_title=y_axis)
+            st.plotly_chart(fig)
+            
+            st.subheader("Graph Insights")
+            statistical_insights = generate_statistical_insights(df, x_axis, y_axis)
+            ai_prompt = f"Analyze this {chart_type} chart for {y_axis} over {x_axis}. Identify trends, anomalies, and patterns."
+            ai_insights = query_ai(ai_prompt, df, x_axis, y_axis, chart_type)
+            
+            st.write(statistical_insights)
+            st.write(ai_insights)
+            
+            user_query = st.text_input("Ask AI about this visualization:")
+            if user_query:
+                query_prompt = f"Based on the provided dataset and {chart_type} chart, answer this question: {user_query}"
+                ai_response = query_ai(query_prompt, df, x_axis, y_axis, chart_type)
+                st.subheader("AI Response")
+                st.write(ai_response)
+        
+        except Exception as e:
+            st.error(f"Error: {str(e)}")
+            st.error(traceback.format_exc())
+            
+if __name__ == "__main__":
+    main()
