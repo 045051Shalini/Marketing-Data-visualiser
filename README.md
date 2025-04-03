@@ -28,8 +28,8 @@ The **AI-Powered Marketing Data Visualizer** is an interactive web application b
 👉 Drag and drop your **demo video** here after uploading it to your repository.
 
 ## 🔧 How to Run the App Locally
-
-```bash
 - Download app.py from this repository
+- 
+```bash
 - pip install -r requirements.txt
 - streamlit run app.py
