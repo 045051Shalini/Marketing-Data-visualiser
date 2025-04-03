@@ -1,6 +1,13 @@
 # 📊 AI-Powered Marketing Data Visualizer 
 [🚀 Try the Live App Here](https://marketing-data-visualiser.streamlit.app/)
 
+## 📹 Demo Video
+
+👉 Drag and drop your **demo video** here after uploading it to your repository.
+
+https://github.com/user-attachments/assets/f93476b7-3eb9-4a6d-9bba-39a5c218f05e
+
+
 ## 🚀 Project Overview
 
 The **AI-Powered Marketing Data Visualizer** is an interactive web application built using **Streamlit, Plotly, and LlamaIndex**. It allows users to upload datasets, generate various types of visualizations, and receive **AI-driven insights** into their data.
@@ -23,11 +30,6 @@ The **AI-Powered Marketing Data Visualizer** is an interactive web application b
 ✅ **Configurable API Key** input for **Groq LLM integration**.  
 ✅ **Error Handling** to ensure **smooth data processing**.  
 
-## 📹 Demo Video
-
-👉 Drag and drop your **demo video** here after uploading it to your repository.
-
-https://github.com/user-attachments/assets/f93476b7-3eb9-4a6d-9bba-39a5c218f05e
 
 ## 🔧 How to Run the App Locally
 - Download app.py from this repository
