@@ -6,7 +6,6 @@ import numpy as np
 from llama_index.core.agent import FunctionCallingAgentWorker, AgentRunner
 from llama_index.core import PromptTemplate, VectorStoreIndex
 from llama_index.llms.groq import Groq
-from llama_index.tools import QueryEngineTool
 from llama_index.core.schema import ToolMetadata
 
 def detect_column_types(df):
