@@ -1,71 +1,75 @@
 import streamlit as st
 import pandas as pd
-import matplotlib.pyplot as plt
-import altair as alt
+import plotly.express as px
 from llama_index.core import Settings
-from llama_index.llms.groq import Groq
-from llama_index.core.agent import FunctionCallingAgentWorker, AgentRunner
+from llama_index.llms.
+from llama_index.embeddings.ollama import OllamaEmbedding
 from llama_index.core.tools import FunctionTool
+from llama_index.core.agent import FunctionCallingAgentWorker, AgentRunner
 
-# ---------------------- App Setup ----------------------
+# Configure LLM and embeddings
+embed_model = OllamaEmbedding(model_name="nomic-embed-text", base_url="http://localhost:11434")
+Settings.embed_model = embed_model
 
-st.set_page_config(page_title="Marketing Data Visualizer", page_icon="📊", layout="wide")
-
-st.title("📊 Marketing Data Visualizer")
-
-# ---------------------- API & Model Setup ----------------------
-
-# Configure the Groq API (Replace with your actual key)
-GROQ_API_KEY = st.secrets.get("GROQ_API_KEY", "your_api_key_here")
-
-llm = Groq(model="llama3-8b-8192", api_key=GROQ_API_KEY)
+llm = MistralAI(_key="VIScv20xwi7bmBbxZ6SiNJzkh35ZOWvM")
 Settings.llm = llm
 
-# ---------------------- File Upload ----------------------
+# Streamlit UI
+st.set_page_config(page_title="AI-Powered Data Visualizer", page_icon="📊", layout="wide")
+st.title("Chat-Based Data Visualizer 💬📊")
 
-uploaded_file = st.file_uploader("📂 Upload your marketing dataset (CSV)", type=["csv"])
+# Upload data
+uploaded_file = st.file_uploader("Upload CSV file", type=["csv"])
 
-if uploaded_file:
-    df = pd.read_csv(uploaded_file)
+data = None
+if uploaded_file is not None:
+    data = pd.read_csv(uploaded_file)
     st.write("### Preview of Uploaded Data")
-    st.dataframe(df.head())
+    st.dataframe(data.head())
 
-    # ---------------------- User Input for Chart ----------------------
-
-    user_prompt = st.text_area("📌 Describe the chart you want to generate", "Create a bar chart for sales by category")
-
-    # ---------------------- AI Agent to Generate Code ----------------------
-
-    def generate_chart_code(query: str) -> str:
-        """Generate Python code for visualizing the dataset based on user input."""
-        code_prompt = f"""
-        Given the following dataset:
-        {df.head(5).to_csv(index=False)}
-
-        Generate Python code (using matplotlib or altair) to create a visualization that meets this requirement:
-        "{query}"
-        Ensure the code is self-contained and correctly references column names.
-        """
-        response = llm.complete(code_prompt)
-        return response.text.strip()
-
-    chart_code_tool = FunctionTool.from_defaults(fn=generate_chart_code)
+# Visualization tool
+async def visualize_data(query: str) -> str:
+    """Generate a visualization based on user input."""
+    if data is None:
+        return "No data uploaded. Please upload a CSV file."
     
-    agent_worker = FunctionCallingAgentWorker.from_tools([chart_code_tool], llm=llm, verbose=True)
-    agent = AgentRunner(agent_worker)
-
-    if st.button("🔍 Generate Chart"):
-        with st.spinner("Generating visualization..."):
-            generated_code = agent.chat(user_prompt).response
+    try:
+        if "bar" in query.lower():
+            fig = px.bar(data, x=data.columns[0], y=data.columns[1])
+        elif "scatter" in query.lower():
+            fig = px.scatter(data, x=data.columns[0], y=data.columns[1])
+        elif "line" in query.lower():
+            fig = px.line(data, x=data.columns[0], y=data.columns[1])
+        else:
+            return "Unsupported chart type. Try bar, scatter, or line."
         
-        # ---------------------- Display & Execute Code ----------------------
+        st.plotly_chart(fig)
+        return "Visualization generated successfully!"
+    except Exception as e:
+        return f"Error generating visualization: {str(e)}"
 
-        st.subheader("📝 Generated Python Code")
-        st.code(generated_code, language="python")
+visualization_tool = FunctionTool.from_defaults(fn=visualize_data)
 
-        st.subheader("📊 Visualization Output")
-        try:
-            exec(generated_code, {"plt": plt, "df": df, "alt": alt, "st": st})
-        except Exception as e:
-            st.error(f"Error executing generated code: {e}")
+# AI Agent
+agent_worker = FunctionCallingAgentWorker.from_tools([visualization_tool], llm=llm, verbose=True)
+agent = AgentRunner(agent_worker)
 
+if "messages" not in st.session_state.keys():
+    st.session_state.messages = [{"role": "assistant", "content": "Upload a CSV and ask me to visualize it!"}]
+
+if "chat_engine" not in st.session_state.keys():
+    st.session_state.chat_engine = agent
+
+if prompt := st.chat_input("Ask for a visualization (e.g., 'Show a bar chart')"):
+    st.session_state.messages.append({"role": "user", "content": prompt})
+
+for message in st.session_state.messages:
+    with st.chat_message(message["role"]):
+        st.write(message["content"])
+
+if st.session_state.messages[-1]["role"] != "assistant":
+    with st.chat_message("assistant"):
+        response = st.session_state.chat_engine.chat(prompt)
+        st.write(response.response)
+        message = {"role": "assistant", "content": response.response}
+        st.session_state.messages.append(message)
