@@ -26,6 +26,7 @@ The **AI-Powered Marketing Data Visualizer** is an interactive web application b
 ## 📹 Demo Video
 
 👉 Drag and drop your **demo video** here after uploading it to your repository.
+
 https://github.com/user-attachments/assets/f93476b7-3eb9-4a6d-9bba-39a5c218f05e
 
 ## 🔧 How to Run the App Locally
