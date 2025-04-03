@@ -37,7 +37,7 @@ def extract_columns_from_prompt(prompt, df):
 
 def main():
     st.set_page_config(layout="wide")
-    st.title("📊 Marketing Data Visualizer with AI Insights")
+    st.title("📊 Marketing Data Visualizer with AI")
     
     # Sidebar for input selections
     st.sidebar.header("1️⃣ Upload & Configure")
@@ -56,11 +56,10 @@ def main():
         user_prompt = st.text_area(
             "💬 Provide a prompt for generating charts and AI insights:",
             """For example, you can type:
-            'Create a bar chart showing sales over time, 
-            and analyze the trends and patterns in customer purchases.'
+            'Create a bar chart showing sales over time'
             """
         )
-        generate_button = st.button("🚀 Generate Visualization & Insights")
+        generate_button = st.button("🚀 Generate Visualization")
         
         if generate_button:
             st.subheader("📈 Visualization")
