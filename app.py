@@ -60,7 +60,7 @@ def generate_metadata(df):
 def main():
     st.title("Dynamic Data Visualizer with Groq AI")
 
-    uploaded_file = st.file_uploader("Upload your dataset (CSV file)", type=["csv"])
+    uploaded_file = st.file_uploader("Upload your dataset (CSV file)", type=["csv"], key="file_uploader_unique")
     
     if uploaded_file is not None:
         try:
