@@ -8,7 +8,7 @@ from llama_index.core.tools import FunctionTool
 from llama_index.core.agent import FunctionCallingAgentWorker, AgentRunner
 
 # Configure LLM and embeddings
-embed_model = OllamaEmbedding(model_name="nomic-embed-text", base_url="http://localhost:11434")
+embed_model = OllamaEmbedding
 Settings.embed_model = embed_model
 
 llm = MistralAI(_key="VIScv20xwi7bmBbxZ6SiNJzkh35ZOWvM")
