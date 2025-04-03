@@ -39,7 +39,11 @@ def generate_metadata(df):
                 metadata[col] = {
                     'column_name': col,
                     'type': str(df[col].dtype),
-                    'variable_information': [df[col].max(), df[col].min(), df[col].mean()]
+                    'variable_information': [
+                        float(df[col].max()),  # Convert to native float
+                        float(df[col].min()),
+                        float(df[col].mean())
+                    ]
                 }
             elif df[col].dtype == 'datetime64[ns]':
                 metadata[col] = {
