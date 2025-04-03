@@ -10,4 +10,4 @@ pyperclip
 tabulate
 requests
 llama-index-tools
-llama-index-vector-stores
+altair
