@@ -112,7 +112,7 @@ st.title("🔹 Advanced Data Visualizer with AI Insights 🔹")
 # File uploader with sample data link
 st.subheader("📂 Upload Your Dataset")
 st.markdown(
-    '[📥 Download Sample Data](https://github.com/045051Shalini/Marketing-Data-visualiser/main/ecommerce_dataset_updated.csv)', 
+    '[📥 Download Sample Data](https://github.com/045051Shalini/Marketing-Data-visualiser/blob/main/ecommerce_dataset_updated.csv)', 
     unsafe_allow_html=True
 )
 uploaded_file = st.file_uploader("Upload your dataset (CSV, Excel)", type=["csv", "xlsx"])
