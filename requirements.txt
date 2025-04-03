@@ -9,6 +9,3 @@ regex
 pyperclip
 tabulate
 requests
-llama-index-tools
-build-essential
-python3-dev
