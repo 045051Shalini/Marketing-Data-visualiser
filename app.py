@@ -115,7 +115,7 @@ st.markdown(
     '[📥 Download Sample Data](https://github.com/045051Shalini/Marketing-Data-visualiser/blob/main/ecommerce_dataset_updated.csv)', 
     unsafe_allow_html=True
 )
-uploaded_file = st.file_uploader("Upload your dataset (CSV, Excel)", type=["csv", "xlsx"])
+uploaded_file = st.file_uploader("Upload your dataset (CSV)", type=["csv"])
 
 if uploaded_file:
     try:
