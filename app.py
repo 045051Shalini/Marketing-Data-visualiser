@@ -123,7 +123,7 @@ if uploaded_file:
         if uploaded_file.name.endswith('.csv'):
             df = pd.read_csv(uploaded_file)
         else:
-            df = pd.read_excel(uploaded_file)
+            ("INVALID uploaded_file")
 
         df, column_types = preprocess_data(df)
         st.success("✅ Dataset uploaded and processed successfully!")
